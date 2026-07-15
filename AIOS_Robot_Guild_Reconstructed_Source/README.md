@@ -1,0 +1,77 @@
+# AIOS Robot Guild
+
+Reconstructed, upgradeable source for the AIOS Robot Guild: a game-style agent workflow with a real Cloudflare Worker/D1 foundation and an approval-gated Repository Health Quest.
+
+## Working features
+
+- Interactive Three.js factory with five clickable robots
+- Router → Planner → Builder → Tester → Reviewer workflow
+- Animated data packet, mission progress, XP, levels, skills, and themes
+- Responsive desktop/mobile interface and reduced-motion support
+- Owner setup/login using PBKDF2 password hashing and an HTTP-only session cookie
+- D1-backed missions, approvals, audit events, and mission history
+- Approval-gated, read-only public GitHub repository inspection
+- Searchable OpenRouter, OpenAI, Anthropic, Gemini, xAI, Mistral, Groq, and Ollama directory
+- Optional server-side OpenRouter planning; keys never reach browser code
+- Forge developer Copilot with server-side model routing and a safe local fallback
+- Developer Studio with official VS Code, GitHub Desktop, GitHub, and Cloudflare links
+- Downloadable localhost terminal companion with pairing, origin checks, confirmation, and four allowlisted commands
+- `/mcp` metadata endpoint
+- Browser demo mode when the Cloudflare backend is not configured
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+The Vite-only development server can open demo mode. For backend development, create D1 and use Wrangler.
+
+## Cloudflare setup
+
+1. Create a D1 database:
+
+   ```bash
+   npx wrangler d1 create aios-robot-guild
+   ```
+
+2. Copy the returned database ID into `wrangler.jsonc`.
+3. Apply the schema:
+
+   ```bash
+   npx wrangler d1 migrations apply aios-robot-guild --remote
+   ```
+
+4. Add optional AI secrets without committing them:
+
+   ```bash
+   npx wrangler secret put OPENROUTER_API_KEY
+   npx wrangler secret put OPENROUTER_MODEL
+   ```
+
+5. Verify and deploy:
+
+   ```bash
+   npm run lint
+   npm test
+   npm run deploy
+   ```
+
+The application works without OpenRouter by using a safe fixed plan. Do not place keys in `.env`, React code, browser storage, screenshots, Git commits, or chat.
+
+## Local terminal companion
+
+Open Developer Studio and download `aios-terminal-companion.mjs`. Put it in the project folder and run:
+
+```bash
+node aios-terminal-companion.mjs
+```
+
+Enter the displayed one-time code in Developer Studio. The companion listens only on `127.0.0.1:4317`, validates the website origin, requires a pairing token, and accepts only `pwd`, `git status --short`, `npm run lint`, and `npm test`. Every browser run also requires confirmation.
+
+## Security boundary
+
+Repository Health Quest accepts only public `https://github.com/owner/repository` URLs and performs public, read-only metadata and root-file inspection. It does not clone, execute repository code, change files, merge, push, or deploy. Every run requires an explicit owner approval recorded in D1.
+
+Before commercial SaaS use, add rate limiting, organization roles, email verification/recovery, security monitoring, backup/retention policies, dependency scanning, and an independent security review.
