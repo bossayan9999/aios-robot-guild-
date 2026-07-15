@@ -13,8 +13,8 @@
     {
       "binding": "DB",
       "database_name": "aios-robot-guild",
-      "database_id": "26a58f8e-d0b1-400b-abfa-84b444b32e30"
-      "migrations_dir": "migrations"
+     "database_id": "26a58f8e-d0b1-400b-abfa-84b444b32e30",
+"migrations_dir": "migrations" 
     }
   ]
 }
