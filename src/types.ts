@@ -47,3 +47,24 @@ export interface KnowledgeHit {
   content: string
   score: number
 }
+
+export interface DeviceDiagnostics {
+  scannedAt: string
+  device: { name: string; platform: string; release: string; arch: string; cpuCores: number; totalMemoryBytes: number; freeMemoryBytes: number; uptimeSeconds: number }
+  project: { path: string; gitRoot: string | null; branch: string | null; clean: boolean; packageFound: boolean }
+  tools: { node: string; npm: string | null; git: string | null }
+  securityTools: { id: string; name: string; installed: boolean; version: string | null; purpose: string; recommended: boolean }[]
+  checks: { id: string; label: string; status: 'pass' | 'warn' | 'fail'; detail: string }[]
+  summary: string
+}
+
+export interface SecurityLabStatus {
+  dockerReady: boolean
+  dockerVersion: string | null
+  active: boolean
+  expiresAt: string | null
+  allowlist: string[]
+  externalNetwork: string
+  audit: { at?: string; action: string; [key: string]: unknown }[]
+  containers: string
+}

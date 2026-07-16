@@ -1,0 +1,14 @@
+.lab-overlay{position:fixed;inset:0 0 0 220px;z-index:8;overflow:auto;background:var(--bg);padding:116px 28px 28px}
+.lab-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(20rem,.8fr);gap:16px}
+.lab-status{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:16px 0}
+.lab-status div{display:grid;gap:3px;padding:11px;border:1px solid var(--line);border-radius:11px;background:#081713}
+.lab-status small{color:var(--muted)}
+.lab-form{display:grid;gap:12px}
+.lab-approval{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--gold);border-radius:10px;background:#2b220d66}
+.lab-approval input{width:auto;margin-top:3px}
+.lab-audit{display:grid;gap:7px;max-height:360px;overflow:auto}
+.lab-audit div{display:grid;grid-template-columns:9rem 1fr;gap:8px;padding:9px;border-bottom:1px solid var(--line)}
+.lab-audit time{color:var(--muted);font-size:12px}
+.lab-safe{border-left:3px solid var(--accent)}
+.lab-danger{border-left:3px solid var(--danger)}
+@media(max-width:900px){.lab-overlay{inset:0;padding:90px 12px}.lab-grid{grid-template-columns:1fr}.lab-status{grid-template-columns:1fr 1fr}}
