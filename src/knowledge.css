@@ -8,4 +8,9 @@
 .citation-list article span { color: var(--accent); font-weight: 800; }
 .citation-list article em { margin-left: auto; font-size: 10px; text-transform: uppercase; color: var(--muted); }
 .citation-list article code { overflow-wrap: anywhere; color: var(--muted); }
+.citation-list footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.danger-small { padding: 6px 9px; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
+.chat-citations { display: grid; gap: 5px; margin-top: 8px; }
+.chat-citations span { display: grid; padding: 7px; border: 1px solid var(--line); border-radius: 8px; color: var(--accent); font-size: 10px; }
+.chat-citations small { color: var(--muted); overflow-wrap: anywhere; }
 @media (max-width: 900px) { .knowledge-grid { grid-template-columns: 1fr; } .knowledge-search { flex-direction: column; } }
