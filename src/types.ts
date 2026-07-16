@@ -36,3 +36,14 @@ export interface AuthStatus {
   setup_required: boolean
   email?: string
 }
+
+export interface KnowledgeHit {
+  id: string
+  document_id: string
+  title: string
+  source_type: string
+  source_uri: string
+  trust_state: string
+  content: string
+  score: number
+}

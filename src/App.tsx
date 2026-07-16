@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { agents, providers } from './data'
-import type { AgentId, AuthStatus, Mission, MissionEvent } from './types'
+import type { AgentId, AuthStatus, KnowledgeHit, Mission, MissionEvent } from './types'
 
 const RobotFactory = lazy(() => import('./RobotFactory').then(module => ({ default: module.RobotFactory })))
 
@@ -38,6 +38,8 @@ export function App() {
   const [goal, setGoal] = useState('Inspect repository health and collect evidence')
   const [repository, setRepository] = useState('https://github.com/bossayan9999/aios-robot-guild-')
   const [modelSearch, setModelSearch] = useState('')
+  const [knowledgeQuery, setKnowledgeQuery] = useState('repository readiness')
+  const [knowledgeHits, setKnowledgeHits] = useState<KnowledgeHit[]>([])
   const [toast, setToast] = useState('')
   const [copilotOpen, setCopilotOpen] = useState(false)
   const [copilotQuestion, setCopilotQuestion] = useState('')
@@ -129,6 +131,14 @@ export function App() {
   async function checkTerminal() {
     try { const response = await fetch('http://127.0.0.1:4317/health'); if (!response.ok) throw new Error(); setTerminalStatus('Companion found • pairing required') } catch { setTerminalStatus('Companion offline • download and run it first') }
   }
+  async function searchGuildMemory() {
+    if (demoMode) return notify('Create a real mission to add verified guild memory')
+    try {
+      const result = await api<{ hits: KnowledgeHit[] }>(`/api/knowledge/search?q=${encodeURIComponent(knowledgeQuery)}`)
+      setKnowledgeHits(result.hits)
+      notify(result.hits.length ? `${result.hits.length} cited memory result(s)` : 'No matching verified memory')
+    } catch (error) { notify(error instanceof Error ? error.message : 'Memory search failed') }
+  }
   async function pairTerminal() {
     try { const response = await fetch('http://127.0.0.1:4317/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pairCode }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error); setTerminalToken(data.token); setTerminalStatus('Paired securely'); notify('Local terminal paired') } catch (error) { notify(error instanceof Error ? error.message : 'Pairing failed') }
   }
@@ -157,7 +167,7 @@ export function App() {
 
       {tab === 'models' && <section className="panel-card"><div className="section-head"><div><p className="kicker">SECURE PROVIDER DIRECTORY</p><h2>Find an AI model provider</h2></div><input className="search" placeholder="Search OpenRouter, Gemini, local…" value={modelSearch} onChange={e => setModelSearch(e.target.value)} /></div><div className="provider-grid">{filteredProviders.map(provider => <article key={provider[0]}><div className="provider-icon">✦</div><h3>{provider[0]}</h3><p>{provider[1]}</p><div><a href={provider[2]} target="_blank" rel="noreferrer">Models ↗</a><a href={provider[3]} target="_blank" rel="noreferrer">Get key ↗</a></div></article>)}</div><div className="notice">Keys belong in Cloudflare encrypted secrets—never browser storage, source code, screenshots, or chat.</div></section>}
 
-      {tab === 'knowledge' && <section className="guild-grid"><article className="panel-card"><p className="kicker">WHAT THE GUILD LEARNS</p><h2>Evidence, not silent retraining</h2><p>XP represents completed, verified work. Future memory should store cited mission results that you can inspect, correct, export, or delete.</p></article><article className="panel-card"><p className="kicker">UNLOCKED SKILLS</p><div className="skills vertical">{agents.map((a, i) => <span key={a.id} className={level > i ? 'unlocked' : ''}>{level > i ? '✓' : '○'} {a.skill}</span>)}</div></article></section>}
+      {tab === 'knowledge' && <section className="knowledge-grid"><article className="panel-card"><p className="kicker">GUILD MEMORY • RAG FOUNDATION</p><h2>Search verified mission evidence</h2><p>Completed quests become owner-only knowledge. Forge retrieves relevant evidence and cites its source; retrieved text is never trusted as an instruction.</p><div className="knowledge-search"><input value={knowledgeQuery} onChange={event => setKnowledgeQuery(event.target.value)} placeholder="Search decisions, repositories, tests…" onKeyDown={event => { if (event.key === 'Enter') searchGuildMemory() }} /><button className="primary" onClick={searchGuildMemory}>Search memory</button></div><div className="citation-list">{knowledgeHits.length ? knowledgeHits.map((hit, index) => <article key={hit.id}><div><span>[K{index + 1}]</span><b>{hit.title}</b><em>{hit.trust_state.replaceAll('_', ' ')}</em></div><p>{hit.content.slice(0, 420)}{hit.content.length > 420 ? '…' : ''}</p><code>{hit.source_uri}</code></article>) : <p className="empty">Run a Repository Health Quest, then search its verified evidence here.</p>}</div></article><aside><article className="panel-card"><p className="kicker">MEMORY CONTRACT</p><h2>Evidence, not silent retraining</h2><ul><li>Owner-scoped retrieval</li><li>Source and trust label on every result</li><li>Mission evidence saved only after the approved run</li><li>Insufficient evidence must be stated</li><li>Delete/export controls before SaaS launch</li></ul></article><article className="panel-card"><p className="kicker">UNLOCKED SKILLS</p><div className="skills vertical">{agents.map((a, i) => <span key={a.id} className={level > i ? 'unlocked' : ''}>{level > i ? '✓' : '○'} {a.skill}</span>)}</div></article></aside></section>}
 
       {tab === 'settings' && <section className="settings-grid"><article className="panel-card"><p className="kicker">APPEARANCE</p><h2>Theme</h2><div className="theme-options"><button onClick={() => setTheme('mission')}>Mission dark</button><button onClick={() => setTheme('warm')}>Warm paper</button><button onClick={() => setTheme('slate')}>Slate blue</button></div></article><article className="panel-card"><p className="kicker">AI CONNECTIONS</p><h2>Models and tools</h2><p>Search providers, open official key pages, then store credentials only as Cloudflare secrets.</p><div className="tool-actions"><button onClick={() => setTab('models')}>Search AI models</button><button onClick={() => setTab('studio')}>Open Developer Studio</button></div></article><article className="panel-card"><p className="kicker">SECURITY</p><h2>Backend rules</h2><ul><li>D1-backed owner login</li><li>HTTP-only session cookie</li><li>Server-side provider secrets</li><li>Explicit human approval</li><li>Read-only GitHub inspection</li></ul></article><article className="panel-card"><p className="kicker">RECOMMENDED NEXT TOOLS</p><h2>Backend capability stack</h2><ul><li>Cloudflare Queues for durable agent jobs</li><li>Vectorize for cited knowledge retrieval</li><li>GitHub App with repository-scoped permissions</li><li>Sentry or Workers Logs for errors</li><li>Stripe only when SaaS billing is ready</li></ul></article></section>}
     </main><button className="copilot-fab" onClick={() => setCopilotOpen(value => !value)} aria-label="Open Forge Copilot"><span>⌘</span><i /></button>{copilotOpen && <aside className="copilot-drawer"><div className="section-head"><div><p className="kicker">FORGE COPILOT</p><h2>Developer specialist</h2></div><button onClick={() => setCopilotOpen(false)}>×</button></div><div className="copilot-chat">{copilotMessages.map((message, index) => <div key={index} className={`chat-message ${message.role}`}><b>{message.role === 'copilot' ? 'Forge' : 'You'}</b><p>{message.text}</p></div>)}</div><form onSubmit={askCopilot}><textarea value={copilotQuestion} onChange={event => setCopilotQuestion(event.target.value)} placeholder="Ask about architecture, models, tests, or your next quest…" /><button className="primary" type="submit">Send to Forge</button></form></aside>}{toast && <div className="toast">{toast}</div>}

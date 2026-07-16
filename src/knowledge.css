@@ -1,0 +1,11 @@
+.knowledge-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(18rem, .8fr); gap: 16px; }
+.knowledge-grid > aside { display: grid; gap: 16px; align-content: start; }
+.knowledge-search { display: flex; gap: 10px; margin: 18px 0; }
+.knowledge-search input { flex: 1; margin: 0; }
+.citation-list { display: grid; gap: 10px; }
+.citation-list article { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: color-mix(in srgb, var(--panel) 82%, var(--accent) 3%); }
+.citation-list article > div { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; }
+.citation-list article span { color: var(--accent); font-weight: 800; }
+.citation-list article em { margin-left: auto; font-size: 10px; text-transform: uppercase; color: var(--muted); }
+.citation-list article code { overflow-wrap: anywhere; color: var(--muted); }
+@media (max-width: 900px) { .knowledge-grid { grid-template-columns: 1fr; } .knowledge-search { flex-direction: column; } }

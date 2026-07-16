@@ -17,6 +17,7 @@ Reconstructed, upgradeable source for the AIOS Robot Guild: a game-style agent w
 - Developer Studio with official VS Code, GitHub Desktop, GitHub, and Cloudflare links
 - Downloadable localhost terminal companion with pairing, origin checks, confirmation, and four allowlisted commands
 - `/mcp` metadata endpoint
+- Guild Memory RAG foundation: approved mission evidence ingestion, owner-scoped retrieval, source citations, trust labels, and deletion API
 - Browser demo mode when the Cloudflare backend is not configured
 
 ## Local development
@@ -59,6 +60,12 @@ The Vite-only development server can open demo mode. For backend development, cr
    ```
 
 The application works without OpenRouter by using a safe fixed plan. Do not place keys in `.env`, React code, browser storage, screenshots, Git commits, or chat.
+
+## Guild Memory RAG
+
+Migration `0002_guild_memory.sql` adds owner-scoped documents and chunks. A completed, approved Repository Health Quest is stored as `verified_mission` evidence. The Knowledge tab searches it and displays stable `[K#]` citations. Forge receives only the top matching evidence, is instructed to treat retrieved content as untrusted data, and must disclose when evidence is insufficient.
+
+This first stage intentionally uses D1 lexical retrieval so it deploys without another paid service or credential. The scale-up path is Cloudflare AI Search or Vectorize hybrid retrieval with metadata filtering, reranking, evaluation, and the same D1 source-of-truth records.
 
 ## Local terminal companion
 

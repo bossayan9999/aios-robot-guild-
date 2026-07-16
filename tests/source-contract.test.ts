@@ -10,4 +10,5 @@ describe('Robot Guild product contract', () => {
     expect(providers.some(provider => provider[0] === 'OpenRouter')).toBe(true)
     expect(providers.some(provider => provider[0] === 'Ollama')).toBe(true)
   })
+
 })
