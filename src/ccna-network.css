@@ -1,1 +1,243 @@
-.ccna-layout{position:fixed;inset:0 0 0 245px;z-index:8;overflow:auto;overflow-x:hidden;background:var(--bg);padding:116px 28px 28px;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,.75fr);gap:18px;align-items:start}.ccna-layout>*{min-width:0}.ccna-layout aside{display:grid;gap:18px;align-content:start;min-width:0}.topology-card{min-width:0}.safe-sim{color:#42e8b7;font-size:.72rem;font-weight:800}.network-map{position:relative;width:100%;height:620px;margin-top:18px;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:radial-gradient(circle at 50% 45%,rgba(41,205,158,.13),transparent 38%),linear-gradient(rgba(44,183,144,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(44,183,144,.055) 1px,transparent 1px);background-size:auto,28px 28px,28px 28px}.network-map svg{position:absolute;inset:0;width:100%;height:100%}.network-map line{stroke:#2ec99a;stroke-width:.45;stroke-dasharray:2 1;vector-effect:non-scaling-stroke}.network-node{position:absolute;transform:translate(-50%,-50%);width:132px;display:grid;justify-items:center;gap:3px;padding:8px;border:1px solid #236c59;border-radius:12px;background:#08251d;color:inherit;box-shadow:0 8px 30px rgba(0,0,0,.3)}.network-node i{font-size:1.35rem;color:#44e7b5}.network-node small{font-size:.65rem}.network-node.warning{border-color:#b97b32}.network-node.warning i{color:#ffc16d}.network-node.selected{outline:2px solid #50b7ff;outline-offset:3px}.network-console{margin-top:14px;border:1px solid var(--line);border-radius:14px;overflow:hidden}.network-console>div{display:flex;align-items:center;gap:8px;padding:10px 14px;background:rgba(0,0,0,.22)}.network-console>div small{margin-left:auto}.network-console .online{color:#43e6b5}.network-console .warning{color:#ffc16d}.network-console pre{min-height:105px;margin:0;padding:14px;white-space:pre-wrap;overflow-wrap:anywhere}.subnet-inputs{display:grid;grid-template-columns:minmax(0,1fr) minmax(76px,90px);gap:10px}.subnet-inputs label,.subnet-inputs input,.subnet-inputs select{min-width:0;max-width:100%}.subnet-inputs select{width:100%;display:block;margin-top:6px;background:#06130f;border:1px solid var(--line);color:var(--text);padding:12px 8px;border-radius:10px}.subnet-results{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:14px}.subnet-results span{display:grid;gap:3px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:10px}.subnet-results span:nth-child(3){grid-column:1/-1}.subnet-results small{opacity:.65}.subnet-results b{overflow-wrap:anywhere;font-size:clamp(.76rem,1.2vw,.95rem)}.network-lessons{display:grid;gap:8px}.network-lessons button{display:flex;justify-content:space-between;gap:12px;text-align:left;padding:11px;border:1px solid var(--line);border-radius:11px;background:transparent;color:inherit}.network-lessons span{display:grid;gap:4px}.network-lessons small{opacity:.65}.network-lessons em{color:#43e6b5;font-style:normal;white-space:nowrap}.command-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}.command-chips button{font-family:monospace;font-size:.72rem}@media(max-width:1450px){.ccna-layout{grid-template-columns:1fr}.network-map{height:560px}}@media(max-width:900px){.ccna-layout{inset:0;padding:90px 12px 84px}.network-map{height:540px}}@media(max-width:640px){.network-map{height:520px}.network-node{width:94px;padding:6px}.network-node b{font-size:.68rem}.network-node small{display:none}.subnet-results{grid-template-columns:1fr}.subnet-results span:nth-child(3){grid-column:auto}}
+.ccna-layout {
+  position: fixed;
+  inset: 0 0 0 245px;
+  z-index: 8;
+  overflow: auto;
+  overflow-x: hidden;
+  background: var(--bg);
+  padding: 116px 28px 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+.ccna-layout > * {
+  min-width: 0;
+}
+.ccna-layout aside {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  min-width: 0;
+}
+.topology-card {
+  min-width: 0;
+}
+.safe-sim {
+  color: #42e8b7;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+.network-map {
+  position: relative;
+  width: 100%;
+  height: 620px;
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(41, 205, 158, 0.13),
+      transparent 38%
+    ),
+    linear-gradient(rgba(44, 183, 144, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(44, 183, 144, 0.055) 1px, transparent 1px);
+  background-size:
+    auto,
+    28px 28px,
+    28px 28px;
+}
+.network-map svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.network-map line {
+  stroke: #2ec99a;
+  stroke-width: 0.45;
+  stroke-dasharray: 2 1;
+  vector-effect: non-scaling-stroke;
+}
+.network-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 132px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid #236c59;
+  border-radius: 12px;
+  background: #08251d;
+  color: inherit;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+}
+.network-node i {
+  font-size: 1.35rem;
+  color: #44e7b5;
+}
+.network-node small {
+  font-size: 0.65rem;
+}
+.network-node.warning {
+  border-color: #b97b32;
+}
+.network-node.warning i {
+  color: #ffc16d;
+}
+.network-node.selected {
+  outline: 2px solid #50b7ff;
+  outline-offset: 3px;
+}
+.network-console {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.network-console > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.22);
+}
+.network-console > div small {
+  margin-left: auto;
+}
+.network-console .online {
+  color: #43e6b5;
+}
+.network-console .warning {
+  color: #ffc16d;
+}
+.network-console pre {
+  min-height: 105px;
+  margin: 0;
+  padding: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.subnet-inputs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+}
+.subnet-inputs label,
+.subnet-inputs input,
+.subnet-inputs select {
+  min-width: 0;
+  max-width: 100%;
+}
+.subnet-inputs select {
+  width: 100%;
+  display: block;
+  margin-top: 6px;
+  background: #06130f;
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 12px 8px;
+  border-radius: 10px;
+}
+.subnet-results {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+.subnet-results span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.subnet-results span:nth-child(3) {
+  grid-column: 1/-1;
+}
+.subnet-results small {
+  opacity: 0.65;
+}
+.subnet-results b {
+  overflow-wrap: anywhere;
+  font-size: clamp(0.76rem, 1.2vw, 0.95rem);
+}
+.network-lessons {
+  display: grid;
+  gap: 8px;
+}
+.network-lessons button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: transparent;
+  color: inherit;
+}
+.network-lessons span {
+  display: grid;
+  gap: 4px;
+}
+.network-lessons small {
+  opacity: 0.65;
+}
+.network-lessons em {
+  color: #43e6b5;
+  font-style: normal;
+  white-space: nowrap;
+}
+.command-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+.command-chips button {
+  font-family: monospace;
+  font-size: 0.72rem;
+}
+@media (max-width: 1450px) {
+  .ccna-layout {
+    grid-template-columns: 1fr;
+  }
+  .network-map {
+    height: 560px;
+  }
+}
+@media (max-width: 900px) {
+  .ccna-layout {
+    inset: 0;
+    padding: 90px 12px 84px;
+  }
+  .network-map {
+    height: 540px;
+  }
+}
+@media (max-width: 640px) {
+  .network-map {
+    height: 520px;
+  }
+  .network-node {
+    width: 94px;
+    padding: 6px;
+  }
+  .network-node b {
+    font-size: 0.68rem;
+  }
+  .network-node small {
+    display: none;
+  }
+  .subnet-results {
+    grid-template-columns: 1fr;
+  }
+  .subnet-results span:nth-child(3) {
+    grid-column: auto;
+  }
+}
