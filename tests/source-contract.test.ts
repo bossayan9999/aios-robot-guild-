@@ -22,4 +22,12 @@ describe('Robot Guild product contract', () => {
     expect(companion).not.toContain('/var/run/docker.sock')
   })
 
+  it('keeps deployment evidence and browser security headers', () => {
+    const worker = readFileSync(new URL('../worker/index.ts', import.meta.url), 'utf8')
+    expect(worker).toContain('X-Request-ID')
+    expect(worker).toContain('Content-Security-Policy')
+    expect(worker).toContain('Strict-Transport-Security')
+    expect(worker).toContain("const BUILD_ID = '2026.07.17-dcc1'")
+  })
+
 })

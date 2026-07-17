@@ -6,5 +6,6 @@ import './knowledge.css'
 import './devices.css'
 import './fastfix.css'
 import './security-lab.css'
+import './deployment.css'
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)

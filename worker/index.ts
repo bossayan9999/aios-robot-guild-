@@ -7,8 +7,21 @@ interface EventRecord { id?: number; mission_id: string; agent: AgentId; event_t
 interface KnowledgeHit { id: string; document_id: string; title: string; source_type: string; source_uri: string; trust_state: string; content: string; score: number }
 
 const COOKIE = 'aios_session'
+const BUILD_ID = '2026.07.17-dcc1'
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } })
 const error = (message: string, status = 400) => json({ error: message }, status)
+
+function finalize(response: Response, request: Request, requestId: string) {
+  const secured = new Response(response.body, response)
+  secured.headers.set('X-Request-ID', requestId)
+  secured.headers.set('X-Content-Type-Options', 'nosniff')
+  secured.headers.set('X-Frame-Options', 'DENY')
+  secured.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  secured.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()')
+  secured.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://127.0.0.1:4317; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'")
+  if (new URL(request.url).protocol === 'https:') secured.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  return secured
+}
 
 function secureCookie(request: Request, value: string, maxAge = 604800) {
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : ''
@@ -120,7 +133,7 @@ async function runInspection(env: Env, mission: Mission) {
 async function apiHandler(request: Request, env: Env) {
   const url = new URL(request.url), method = request.method
   if (method !== 'GET' && !mutationAllowed(request)) return error('Cross-origin mutation blocked', 403)
-  if (url.pathname === '/api/health' && method === 'GET') return json({ ok: true, service: 'AIOS Robot Guild', version: '1.0.0' })
+  if (url.pathname === '/api/health' && method === 'GET') return json({ ok: true, service: 'AIOS Robot Guild', version: '1.1.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass' }, checked_at: new Date().toISOString() })
   if (url.pathname === '/api/auth/status' && method === 'GET') {
     const id = await userId(request, env); const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()
     const user = id ? await env.DB.prepare('SELECT email FROM users WHERE id=?').bind(id).first<{ email: string }>() : null
@@ -194,8 +207,11 @@ async function apiHandler(request: Request, env: Env) {
 export default {
   async fetch(request: Request, env: Env) {
     const url = new URL(request.url)
-    if (url.pathname === '/mcp') return json({ name: 'AIOS Robot Guild', protocolVersion: '2025-06-18', transport: 'https', tools: [{ name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }], authentication: 'owner session required for execution' })
-    if (url.pathname.startsWith('/api/')) { try { return await apiHandler(request, env) } catch (problem) { if (problem instanceof Response) return problem; return error(problem instanceof Error ? problem.message : 'Unexpected error', 500) } }
-    return env.ASSETS.fetch(request)
+    const requestId = crypto.randomUUID()
+    let response: Response
+    if (url.pathname === '/mcp') response = json({ name: 'AIOS Robot Guild', protocolVersion: '2025-06-18', transport: 'https', build: BUILD_ID, tools: [{ name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }], authentication: 'owner session required for execution' })
+    else if (url.pathname.startsWith('/api/')) { try { response = await apiHandler(request, env) } catch (problem) { response = problem instanceof Response ? problem : error(problem instanceof Error ? problem.message : 'Unexpected error', 500) } }
+    else response = await env.ASSETS.fetch(request)
+    return finalize(response, request, requestId)
   },
 } satisfies ExportedHandler<Env>

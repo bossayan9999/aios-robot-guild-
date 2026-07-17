@@ -68,3 +68,13 @@ export interface SecurityLabStatus {
   audit: { at?: string; action: string; [key: string]: unknown }[]
   containers: string
 }
+
+export interface DeploymentHealth {
+  ok: boolean
+  service: string
+  version: string
+  build: string
+  checks: { worker: string; assets: string }
+  checked_at: string
+  request_id?: string
+}
