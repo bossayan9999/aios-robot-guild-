@@ -1,14 +1,17 @@
 import { cookieValue, hashPassword, randomHex, sha256, verifyPassword } from './security'
+import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server'
+import type { AuthenticationResponseJSON, AuthenticatorTransportFuture, RegistrationResponseJSON } from '@simplewebauthn/server'
 
-interface Env { DB: D1Database; ASSETS: Fetcher; OPENROUTER_API_KEY?: string; OPENROUTER_MODEL?: string }
+interface Env { DB: D1Database; ASSETS: Fetcher; OPENROUTER_API_KEY?: string; OPENROUTER_MODEL?: string; GITHUB_APP_ID?: string; GITHUB_APP_INSTALLATION_ID?: string }
 type AgentId = 'router' | 'planner' | 'builder' | 'tester' | 'reviewer'
 interface Mission { id: string; user_id: number; title: string; repository: string; status: string; plan: string; result?: string; created_at: string; updated_at: string }
 interface EventRecord { id?: number; mission_id: string; agent: AgentId; event_type: string; message: string; progress: number; evidence?: string; created_at?: string }
 interface KnowledgeHit { id: string; document_id: string; title: string; source_type: string; source_uri: string; trust_state: string; content: string; score: number }
 interface AuditContext { action: string; mission_id?: string; decision?: 'approved' | 'rejected' }
+interface PasskeyRow { id: string; user_id: number; name: string; public_key: ArrayBuffer; counter: number; transports: string; device_type: string; backed_up: number; created_at: string; last_used_at?: string }
 
 const COOKIE = 'aios_session'
-const BUILD_ID = '2026.07.17-audit1'
+const BUILD_ID = '2026.07.18-network1'
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } })
 const error = (message: string, status = 400) => json({ error: message }, status)
 
@@ -30,6 +33,11 @@ function auditAction(method: string, pathname: string) {
   if (pathname === '/api/auth/setup') return 'auth.setup'
   if (pathname === '/api/auth/login') return 'auth.login'
   if (pathname === '/api/auth/logout') return 'auth.logout'
+  if (pathname === '/api/auth/password') return 'auth.password_change'
+  if (pathname.includes('/passkeys/register')) return 'passkey.register'
+  if (pathname.includes('/passkeys/auth')) return 'passkey.authenticate'
+  if (pathname.startsWith('/api/passkeys/')) return method === 'DELETE' ? 'passkey.delete' : 'passkey.manage'
+  if (pathname.startsWith('/api/releases')) return method === 'POST' ? 'release.mutate' : 'release.read'
   if (pathname === '/api/copilot') return 'copilot.request'
   if (pathname === '/api/knowledge/search') return 'knowledge.search'
   if (/^\/api\/knowledge\//.test(pathname) && method === 'DELETE') return 'knowledge.delete'
@@ -88,6 +96,16 @@ async function userId(request: Request, env: Env) {
   return row?.user_id || null
 }
 async function requireUser(request: Request, env: Env) { const id = await userId(request, env); if (!id) throw new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } }); return id }
+async function freshSession(env: Env, owner: number) { const token = randomHex(); await env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+7 days'))").bind(await sha256(token), owner).run(); return token }
+async function saveChallenge(env: Env, challenge: string, owner: number, purpose: 'registration' | 'authentication') {
+  await env.DB.batch([env.DB.prepare("DELETE FROM passkey_challenges WHERE expires_at <= datetime('now')"), env.DB.prepare("INSERT INTO passkey_challenges(challenge,user_id,purpose,expires_at) VALUES(?,?,?,datetime('now','+5 minutes'))").bind(challenge, owner, purpose)])
+}
+async function consumeChallenge(env: Env, challenge: string, purpose: 'registration' | 'authentication') {
+  const row = await env.DB.prepare("SELECT user_id FROM passkey_challenges WHERE challenge=? AND purpose=? AND expires_at > datetime('now')").bind(challenge, purpose).first<{ user_id: number }>()
+  if (!row) throw new Error('Passkey challenge expired or already used')
+  await env.DB.prepare('DELETE FROM passkey_challenges WHERE challenge=?').bind(challenge).run()
+  return row.user_id
+}
 async function missionForUser(env: Env, id: string, owner: number) { return env.DB.prepare('SELECT * FROM missions WHERE id=? AND user_id=?').bind(id, owner).first<Mission>() }
 async function eventsForMission(env: Env, id: string) { return (await env.DB.prepare('SELECT * FROM mission_events WHERE mission_id=? ORDER BY id').bind(id).all<EventRecord>()).results }
 async function addEvent(env: Env, event: EventRecord) { await env.DB.prepare('INSERT INTO mission_events(mission_id,agent,event_type,message,progress,evidence) VALUES(?,?,?,?,?,?)').bind(event.mission_id, event.agent, event.event_type, event.message, event.progress, event.evidence || null).run() }
@@ -204,7 +222,114 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
     const token = cookieValue(request, COOKIE); if (token) await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(await sha256(token)).run()
     return json({ ok: true }, 200, { 'Set-Cookie': secureCookie(request, '', 0) })
   }
+  if (url.pathname === '/api/passkeys/auth/options' && method === 'POST') {
+    const user = await env.DB.prepare('SELECT id FROM users ORDER BY id LIMIT 1').first<{ id: number }>()
+    if (!user) return error('Owner account is not configured', 409)
+    const credentials = (await env.DB.prepare('SELECT id,transports FROM passkey_credentials WHERE user_id=?').bind(user.id).all<{ id: string; transports: string }>()).results
+    if (!credentials.length) return error('No passkey is registered', 404)
+    const options = await generateAuthenticationOptions({ rpID: url.hostname, userVerification: 'required', allowCredentials: credentials.map(item => ({ id: item.id, transports: JSON.parse(item.transports) as AuthenticatorTransportFuture[] })) })
+    await saveChallenge(env, options.challenge, user.id, 'authentication')
+    return json(options)
+  }
+  if (url.pathname === '/api/passkeys/auth/verify' && method === 'POST') {
+    const input = await body<{ challenge: string; response: AuthenticationResponseJSON }>(request)
+    const owner = await consumeChallenge(env, input.challenge, 'authentication')
+    const credential = await env.DB.prepare('SELECT * FROM passkey_credentials WHERE id=? AND user_id=?').bind(input.response?.id, owner).first<PasskeyRow>()
+    if (!credential) return error('Passkey is not recognized', 401)
+    const verification = await verifyAuthenticationResponse({ response: input.response, expectedChallenge: input.challenge, expectedOrigin: url.origin, expectedRPID: url.hostname, credential: { id: credential.id, publicKey: new Uint8Array(credential.public_key), counter: credential.counter, transports: JSON.parse(credential.transports) } })
+    if (!verification.verified) return error('Passkey verification failed', 401)
+    await env.DB.prepare('UPDATE passkey_credentials SET counter=?,last_used_at=CURRENT_TIMESTAMP WHERE id=?').bind(verification.authenticationInfo.newCounter, credential.id).run()
+    const token = await freshSession(env, owner)
+    return json({ ok: true }, 200, { 'Set-Cookie': secureCookie(request, token) })
+  }
   const owner = await requireUser(request, env)
+  if (url.pathname === '/api/releases/status' && method === 'GET') {
+    const githubConnected = Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_INSTALLATION_ID)
+    return json({ mode: githubConnected ? 'github_app_ready' : 'proposal_only', github_connected: githubConnected, cloudflare_connected: true, build: BUILD_ID })
+  }
+  if (url.pathname === '/api/releases' && method === 'GET') {
+    const rows = await env.DB.prepare('SELECT * FROM release_proposals WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(owner).all()
+    return json({ releases: rows.results })
+  }
+  if (url.pathname === '/api/releases' && method === 'POST') {
+    audit.action = 'release.create'
+    const input = await body<{ title: string; goal: string }>(request)
+    const title = input.title?.trim(), goal = input.goal?.trim()
+    if (!title || title.length < 3 || title.length > 120) return error('Release title must contain 3 to 120 characters', 422)
+    if (!goal || goal.length < 10 || goal.length > 2000) return error('Release goal must contain 10 to 2000 characters', 422)
+    const id = crypto.randomUUID().replaceAll('-', '').slice(0, 12)
+    const plan = ['1. Router validates scope and safety boundaries.', '2. Planner maps the smallest repository-scoped change.', '3. Builder prepares an isolated branch and patch.', '4. Tester runs lint, tests, build and security contracts.', '5. Reviewer presents evidence and waits for owner approval.', '6. Deployment proceeds only through the connected GitHub and Cloudflare pipeline.'].join('\n')
+    await env.DB.batch([
+      env.DB.prepare("INSERT INTO release_proposals(id,user_id,title,goal,status,plan,risk) VALUES(?,?,?,?, 'planned', ?, 'review_required')").bind(id, owner, title, goal, plan),
+      env.DB.prepare("INSERT INTO release_events(proposal_id,stage,event_type,message) VALUES(?, 'router', 'goal_scoped', 'Goal recorded. No repository mutation or deployment has occurred.')").bind(id),
+      env.DB.prepare("INSERT INTO release_events(proposal_id,stage,event_type,message) VALUES(?, 'planner', 'plan_created', 'Approval-gated release plan created.')").bind(id),
+    ])
+    const proposal = await env.DB.prepare('SELECT * FROM release_proposals WHERE id=? AND user_id=?').bind(id, owner).first()
+    const events = await env.DB.prepare('SELECT * FROM release_events WHERE proposal_id=? ORDER BY id').bind(id).all()
+    return json({ proposal, events: events.results })
+  }
+  const releaseMatch = url.pathname.match(/^\/api\/releases\/([a-f0-9]{12})(?:\/(approval))?$/)
+  if (releaseMatch) {
+    const proposal = await env.DB.prepare('SELECT * FROM release_proposals WHERE id=? AND user_id=?').bind(releaseMatch[1], owner).first<{ id: string; status: string }>()
+    if (!proposal) return error('Release proposal not found', 404)
+    if (!releaseMatch[2] && method === 'GET') {
+      const events = await env.DB.prepare('SELECT * FROM release_events WHERE proposal_id=? ORDER BY id').bind(proposal.id).all()
+      return json({ proposal, events: events.results })
+    }
+    if (releaseMatch[2] === 'approval' && method === 'POST') {
+      const input = await body<{ decision: string }>(request)
+      if (!['approved', 'rejected'].includes(input.decision)) return error('Decision must be approved or rejected', 422)
+      if (proposal.status !== 'planned') return error('Release is not awaiting approval', 409)
+      audit.action = 'release.approval'; audit.decision = input.decision as 'approved' | 'rejected'
+      const githubConnected = Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_INSTALLATION_ID)
+      const status = input.decision === 'rejected' ? 'rejected' : githubConnected ? 'approved_ready_for_pr' : 'approved_waiting_connection'
+      const message = input.decision === 'rejected' ? 'Owner rejected the release proposal.' : githubConnected ? 'Owner approved. GitHub App is ready for a future branch/PR executor.' : 'Owner approved. Execution is paused until a repository-scoped GitHub App is connected.'
+      await env.DB.batch([
+        env.DB.prepare('UPDATE release_proposals SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?').bind(status, proposal.id, owner),
+        env.DB.prepare("INSERT INTO release_events(proposal_id,stage,event_type,message) VALUES(?, 'reviewer', 'owner_decision', ?)").bind(proposal.id, message),
+      ])
+      return json({ proposal: await env.DB.prepare('SELECT * FROM release_proposals WHERE id=? AND user_id=?').bind(proposal.id, owner).first(), message })
+    }
+  }
+  if (url.pathname === '/api/auth/password' && method === 'POST') {
+    audit.action = 'auth.password_change'
+    const input = await body<{ password: string }>(request)
+    if (typeof input.password !== 'string' || input.password.length < 12 || input.password.length > 128) return error('New password must contain 12 to 128 characters', 422)
+    const password = await hashPassword(input.password)
+    const token = randomHex()
+    await env.DB.batch([
+      env.DB.prepare('UPDATE users SET password_hash=?,password_salt=? WHERE id=?').bind(password.hash, password.salt, owner),
+      env.DB.prepare('DELETE FROM sessions WHERE user_id=?').bind(owner),
+      env.DB.prepare("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+7 days'))").bind(await sha256(token), owner),
+    ])
+    return json({ ok: true, sessions_rotated: true }, 200, { 'Set-Cookie': secureCookie(request, token) })
+  }
+  if (url.pathname === '/api/passkeys' && method === 'GET') {
+    const rows = await env.DB.prepare('SELECT id,name,device_type,backed_up,created_at,last_used_at FROM passkey_credentials WHERE user_id=? ORDER BY created_at DESC').bind(owner).all()
+    return json({ passkeys: rows.results })
+  }
+  if (url.pathname === '/api/passkeys/register/options' && method === 'POST') {
+    const user = await env.DB.prepare('SELECT email FROM users WHERE id=?').bind(owner).first<{ email: string }>()
+    const credentials = (await env.DB.prepare('SELECT id,transports FROM passkey_credentials WHERE user_id=?').bind(owner).all<{ id: string; transports: string }>()).results
+    const options = await generateRegistrationOptions({ rpName: 'AIOS Robot Guild', rpID: url.hostname, userName: user!.email, userID: new TextEncoder().encode(String(owner)), attestationType: 'none', excludeCredentials: credentials.map(item => ({ id: item.id, transports: JSON.parse(item.transports) as AuthenticatorTransportFuture[] })), authenticatorSelection: { residentKey: 'required', userVerification: 'required' } })
+    await saveChallenge(env, options.challenge, owner, 'registration')
+    return json(options)
+  }
+  if (url.pathname === '/api/passkeys/register/verify' && method === 'POST') {
+    const input = await body<{ challenge: string; name?: string; response: RegistrationResponseJSON }>(request)
+    const challengeOwner = await consumeChallenge(env, input.challenge, 'registration')
+    if (challengeOwner !== owner) return error('Passkey challenge owner mismatch', 403)
+    const verification = await verifyRegistrationResponse({ response: input.response, expectedChallenge: input.challenge, expectedOrigin: url.origin, expectedRPID: url.hostname, requireUserVerification: true })
+    if (!verification.verified || !verification.registrationInfo) return error('Passkey registration failed', 400)
+    const info = verification.registrationInfo
+    await env.DB.prepare('INSERT INTO passkey_credentials(id,user_id,name,public_key,counter,transports,device_type,backed_up) VALUES(?,?,?,?,?,?,?,?)').bind(info.credential.id, owner, (input.name || 'My passkey').trim().slice(0, 60), info.credential.publicKey, info.credential.counter, JSON.stringify(info.credential.transports || []), info.credentialDeviceType, info.credentialBackedUp ? 1 : 0).run()
+    return json({ ok: true })
+  }
+  const passkeyDelete = url.pathname.match(/^\/api\/passkeys\/([A-Za-z0-9_-]{16,512})$/)
+  if (passkeyDelete && method === 'DELETE') {
+    await env.DB.prepare('DELETE FROM passkey_credentials WHERE id=? AND user_id=?').bind(passkeyDelete[1], owner).run()
+    return json({ ok: true })
+  }
   if (url.pathname === '/api/copilot' && method === 'POST') {
     audit.action = 'copilot.request'
     const input = await body<{ question: string }>(request)
@@ -264,7 +389,7 @@ export default {
     const startedAt = Date.now()
     const audit: AuditContext = { action: auditAction(request.method, url.pathname) }
     let response: Response
-    if (url.pathname === '/mcp') response = json({ name: 'AIOS Robot Guild', protocolVersion: '2025-06-18', transport: 'https', build: BUILD_ID, tools: [{ name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }], authentication: 'owner session required for execution' })
+    if (url.pathname === '/mcp') response = json({ name: 'AIOS Robot Guild', protocolVersion: '2025-06-18', transport: 'https', build: BUILD_ID, tools: [{ name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }, { name: 'release_center', description: 'Owner-scoped release proposals, approvals and audit evidence; repository mutation requires a GitHub App' }], authentication: 'owner session required for execution' })
     else if (url.pathname.startsWith('/api/')) { try { response = await apiHandler(request, env, audit) } catch (problem) { response = problem instanceof Response ? problem : error(problem instanceof Error ? problem.message : 'Unexpected error', 500) } }
     else response = await env.ASSETS.fetch(request)
     const secured = finalize(response, request, requestId)

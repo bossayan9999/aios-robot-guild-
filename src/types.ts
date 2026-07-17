@@ -78,3 +78,30 @@ export interface DeploymentHealth {
   checked_at: string
   request_id?: string
 }
+
+export interface ReleaseProposal {
+  id: string
+  title: string
+  goal: string
+  status: string
+  plan: string
+  risk: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ReleaseEvent {
+  id: number
+  proposal_id: string
+  stage: string
+  event_type: string
+  message: string
+  created_at: string
+}
+
+export interface ReleaseCenterStatus {
+  mode: 'proposal_only' | 'github_app_ready'
+  github_connected: boolean
+  cloudflare_connected: boolean
+  build: string
+}

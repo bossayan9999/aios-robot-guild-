@@ -11,6 +11,8 @@
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "@vitejs/plugin-react": "latest",
     "react": "latest",
     "react-dom": "latest",

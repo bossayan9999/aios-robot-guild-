@@ -7,5 +7,8 @@ import './devices.css'
 import './fastfix.css'
 import './security-lab.css'
 import './deployment.css'
+import './account.css'
+import './update-center.css'
+import './ccna-network.css'
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)
