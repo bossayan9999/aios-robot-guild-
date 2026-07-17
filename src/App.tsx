@@ -11,7 +11,7 @@ type Tab = 'guild' | 'quest' | 'missions' | 'studio' | 'devices' | 'network' | '
 type Theme = 'mission' | 'warm' | 'slate'
 type CopilotMessage = { role: 'user' | 'copilot'; text: string; citations?: KnowledgeHit[] }
 type PasskeySummary = { id: string; name: string; device_type: string; backed_up: number; created_at: string; last_used_at?: string }
-const UI_BUILD = '2026.07.18-network1'
+const UI_BUILD = '2026.07.18-network2'
 
 const demoEvents: MissionEvent[] = [
   { agent: 'router', event_type: 'scope', message: 'Repository URL validated and public metadata collected.', progress: 20 },

@@ -28,8 +28,8 @@ describe('Robot Guild product contract', () => {
     expect(worker).toContain('X-Request-ID')
     expect(worker).toContain('Content-Security-Policy')
     expect(worker).toContain('Strict-Transport-Security')
-    expect(worker).toContain("const BUILD_ID = '2026.07.18-network1'")
-    expect(app).toContain("const UI_BUILD = '2026.07.18-network1'")
+    expect(worker).toContain("const BUILD_ID = '2026.07.18-network2'")
+    expect(app).toContain("const UI_BUILD = '2026.07.18-network2'")
   })
 
   it('emits redacted structured audit events', () => {
@@ -79,6 +79,10 @@ describe('Robot Guild product contract', () => {
     expect(lab).toContain('Simulation only — no real device was contacted')
     expect(lab).toContain('explicit allowlist')
     expect(lab).not.toContain('fetch(')
+    const styles = readFileSync(new URL('../src/ccna-network.css', import.meta.url), 'utf8')
+    expect(styles).toContain('@media(max-width:1450px)')
+    expect(styles).toContain('overflow-x:hidden')
+    expect(styles).toContain('grid-template-columns:minmax(0,1fr)')
   })
 
 })
