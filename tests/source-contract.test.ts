@@ -28,8 +28,8 @@ describe('Robot Guild product contract', () => {
     expect(worker).toContain('X-Request-ID')
     expect(worker).toContain('Content-Security-Policy')
     expect(worker).toContain('Strict-Transport-Security')
-    expect(worker).toContain("const BUILD_ID = '2026.07.18-network3'")
-    expect(app).toContain("const UI_BUILD = '2026.07.18-network3'")
+    expect(worker).toContain("const BUILD_ID = '2026.07.18-command1'")
+    expect(app).toMatch(/const UI_BUILD = ["']2026\.07\.18-command1["']/)
   })
 
   it('emits redacted structured audit events', () => {
@@ -68,7 +68,7 @@ describe('Robot Guild product contract', () => {
     expect(worker).toContain("'approved_waiting_connection'")
     expect(worker).toContain('repository-scoped GitHub App')
     expect(app).toContain('No code will be changed by this approval')
-    expect(app).toContain('It never edits GitHub or deploys production')
+    expect(app).toMatch(/It\s+never\s+edits\s+GitHub\s+or\s+deploys\s+production/)
     expect(worker).not.toContain('git push')
   })
 
@@ -83,6 +83,29 @@ describe('Robot Guild product contract', () => {
     expect(styles).toMatch(/@media\s*\(max-width:\s*1450px\)/)
     expect(styles).toMatch(/overflow-x:\s*hidden/)
     expect(styles).toMatch(/\.subnet-inputs\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s)
+  })
+
+  it('keeps the professional command center tied to real mission evidence and owner controls', () => {
+    const dashboard = readFileSync(new URL('../src/GuildCommandCenter.tsx', import.meta.url), 'utf8')
+    expect(dashboard).toContain('Agentic Command Deck')
+    expect(dashboard).toContain('LIVE GUILD DISTRICT')
+    expect(dashboard).toContain('LATEST HANDOFFS')
+    expect(dashboard).toContain('EVIDENCE VAULT')
+    expect(dashboard).toContain("onNavigate('quest')")
+    expect(dashboard).not.toContain('dangerouslySetInnerHTML')
+  })
+
+  it('keeps Forge communication interactive and browser-permission gated', () => {
+    const app = readFileSync(new URL('../src/App.tsx', import.meta.url), 'utf8')
+    const worker = readFileSync(new URL('../worker/index.ts', import.meta.url), 'utf8')
+    expect(app).toContain('SpeechSynthesisUtterance')
+    expect(app).toContain('Voice question captured • review it before sending')
+    expect(app).toContain('Microphone access requires your browser permission')
+    expect(app).toContain('Listen')
+    expect(app).not.toContain('getUserMedia(')
+    expect(worker).toContain("SELECT COUNT(*) AS count FROM missions WHERE user_id=? AND status='review_required'")
+    expect(worker).toContain('Growth comes only from approved missions')
+    expect(worker).toContain("url.pathname === '/api/copilot/profile'")
   })
 
 })

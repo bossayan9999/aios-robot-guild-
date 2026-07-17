@@ -1,0 +1,231 @@
+.forge-growth {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin: 14px 0;
+}
+.forge-growth > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #081713;
+}
+.forge-growth b {
+  color: var(--accent);
+  font-size: 18px;
+}
+.forge-growth small {
+  color: var(--muted);
+  font-size: 7px;
+  letter-spacing: 0.1em;
+}
+.copilot-drawer {
+  width: min(460px, calc(100vw - 30px));
+  height: min(720px, calc(100vh - 110px));
+  grid-template-rows: auto auto auto 1fr auto;
+}
+.copilot-presence {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: linear-gradient(135deg, #0a211b, #0b1714);
+}
+.copilot-presence > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.copilot-presence small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.copilot-presence > button {
+  padding: 7px 9px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.copilot-presence > button.voice-on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.copilot-mini-face {
+  width: 46px;
+  height: 46px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #d8eee7, #5d8e80);
+  border: 3px solid #1c5a49;
+  color: #06231a;
+  font-size: 19px;
+  font-weight: 900;
+  box-shadow: 0 0 20px #42e5ae33;
+}
+.copilot-mini-face > i {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+.copilot-mini-face.thinking {
+  animation: forgeThink 0.8s infinite alternate;
+}
+.copilot-mini-face.listening {
+  border-color: var(--gold);
+  box-shadow: 0 0 24px #f4bd4d55;
+}
+.copilot-quick-prompts {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 0 8px;
+}
+.copilot-quick-prompts button {
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  font-size: 9px;
+}
+.message-listen {
+  display: inline-flex;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 9px;
+}
+.copilot-compose {
+  display: grid;
+  grid-template-columns: 1fr 44px;
+  gap: 7px;
+  align-items: stretch;
+}
+.copilot-compose textarea {
+  margin: 0;
+  min-height: 75px;
+}
+.copilot-compose > button {
+  font-size: 18px;
+  padding: 6px;
+}
+.copilot-compose > button.listening {
+  color: #ff7a70;
+  border-color: #ff7a70;
+  animation: voicePulse 0.75s infinite alternate;
+}
+.copilot-drawer form > button {
+  margin-top: 7px;
+}
+.voice-privacy {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.4;
+}
+.forge-typing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px;
+  color: var(--muted);
+  font-size: 9px;
+}
+.forge-typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: typingDot 0.8s infinite alternate;
+}
+.forge-typing i:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.forge-typing i:nth-child(3) {
+  animation-delay: 0.32s;
+}
+.forge-typing span {
+  margin-left: 5px;
+}
+.copilot-fab.thinking {
+  animation: forgeThink 0.8s infinite alternate;
+}
+.chat-message {
+  position: relative;
+}
+.chat-message p {
+  white-space: pre-wrap;
+}
+.chat-citations {
+  display: grid;
+  gap: 5px;
+  margin-top: 7px;
+}
+.chat-citations span {
+  display: grid;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--accent);
+  font-size: 9px;
+}
+.chat-citations small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+@keyframes forgeThink {
+  to {
+    filter: brightness(1.18);
+    transform: translateY(-2px);
+    box-shadow: 0 0 34px #42e5ae77;
+  }
+}
+@keyframes voicePulse {
+  to {
+    filter: brightness(1.4);
+    transform: scale(0.96);
+  }
+}
+@keyframes typingDot {
+  to {
+    opacity: 0.25;
+    transform: translateY(-3px);
+  }
+}
+@media (max-width: 900px) {
+  .copilot-drawer {
+    height: min(680px, calc(100vh - 165px));
+  }
+}
+@media (max-width: 480px) {
+  .copilot-drawer {
+    right: 8px;
+    width: calc(100vw - 16px);
+    padding: 12px;
+  }
+  .copilot-presence {
+    grid-template-columns: 42px 1fr;
+  }
+  .copilot-presence > button {
+    grid-column: 1/-1;
+  }
+  .copilot-mini-face {
+    width: 40px;
+    height: 40px;
+  }
+  .copilot-quick-prompts {
+    margin-right: -4px;
+  }
+}

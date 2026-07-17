@@ -105,3 +105,13 @@ export interface ReleaseCenterStatus {
   cloudflare_connected: boolean
   build: string
 }
+
+export interface ForgeProfile {
+  level: number
+  xp: number
+  next_level_xp: number
+  verified_missions: number
+  memory_records: number
+  recorded_handoffs: number
+  skills: string[]
+}
