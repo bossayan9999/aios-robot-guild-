@@ -1,0 +1,8 @@
+.device-grid aside > .panel-card:first-child h2,
+.device-grid aside > .panel-card:first-child ul { display: none; }
+.device-grid aside > .panel-card:first-child::after {
+  content: "Forge coordinates the diagnosis and repair plan. You review one clear summary, then approve or reject the fix.";
+  display: block;
+  color: var(--muted);
+  line-height: 1.6;
+}
