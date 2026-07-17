@@ -7,7 +7,7 @@ const RobotFactory = lazy(() => import('./RobotFactory').then(module => ({ defau
 type Tab = 'guild' | 'quest' | 'missions' | 'studio' | 'devices' | 'lab' | 'ops' | 'models' | 'knowledge' | 'settings'
 type Theme = 'mission' | 'warm' | 'slate'
 type CopilotMessage = { role: 'user' | 'copilot'; text: string; citations?: KnowledgeHit[] }
-const UI_BUILD = '2026.07.17-dcc1'
+const UI_BUILD = '2026.07.17-audit1'
 
 const demoEvents: MissionEvent[] = [
   { agent: 'router', event_type: 'scope', message: 'Repository URL validated and public metadata collected.', progress: 20 },
