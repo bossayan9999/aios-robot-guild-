@@ -12,5 +12,10 @@ import './update-center.css'
 import './ccna-network.css'
 import './command-center.css'
 import './copilot-communication.css'
+import './forge-growth.css'
+import './engineering-guild.css'
+import './sandbox-loop.css'
+import './guild-rewards.css'
+import './strong-team.css'
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)

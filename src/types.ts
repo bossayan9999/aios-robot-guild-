@@ -114,4 +114,19 @@ export interface ForgeProfile {
   memory_records: number
   recorded_handoffs: number
   skills: string[]
+  specialists: EngineeringSpecialist[]
+  guild_tokens: number
+  tool_badges: string[]
+}
+
+export interface EngineeringSpecialist {
+  id: AgentId
+  name: string
+  role: string
+  xp: number
+  level: number
+  rank: 'Apprentice' | 'Junior' | 'Specialist' | 'Senior' | 'Lead' | 'Principal' | 'Guild Master'
+  completed_missions: number
+  skills: string[]
+  disciplines: string[]
 }

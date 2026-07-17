@@ -24,6 +24,7 @@ import type {
 } from "@simplewebauthn/browser";
 import { CCNANetworkLab } from "./CCNANetworkLab";
 import { GuildCommandCenter } from "./GuildCommandCenter";
+import { ForgeGrowthCenter } from "./ForgeGrowthCenter";
 
 const RobotFactory = lazy(() =>
   import("./RobotFactory").then((module) => ({ default: module.RobotFactory })),
@@ -34,6 +35,7 @@ type Tab =
   | "quest"
   | "missions"
   | "studio"
+  | "forge"
   | "devices"
   | "network"
   | "lab"
@@ -56,7 +58,7 @@ type PasskeySummary = {
   created_at: string;
   last_used_at?: string;
 };
-const UI_BUILD = "2026.07.18-command1";
+const UI_BUILD = "2026.07.18-guild3";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -217,7 +219,11 @@ export function App() {
     localStorage.setItem("aios-xp", String(xp));
   }, [xp]);
   useEffect(() => {
-    if ((auth?.authenticated || demoMode) && tab === "missions") loadMissions();
+    if (
+      (auth?.authenticated || demoMode) &&
+      (tab === "missions" || tab === "forge")
+    )
+      loadMissions();
   }, [tab, auth?.authenticated, demoMode]);
   useEffect(() => {
     if (auth?.authenticated && tab === "settings") loadPasskeys();
@@ -860,6 +866,32 @@ export function App() {
     skills: agents
       .slice(0, Math.min(level, agents.length))
       .map((agent) => agent.skill),
+    specialists: agents.map((agent, index) => ({
+      id: agent.id,
+      name: agent.name,
+      role: [
+        "Requirements & Systems Architect",
+        "Solution & Source Intelligence Engineer",
+        "Full-Stack & Evidence Engineer",
+        "Quality & Verification Engineer",
+        "Release & Intelligence Review Engineer",
+      ][index],
+      xp: mission?.status === "review_required" ? 100 : 0,
+      level: 1,
+      rank: "Apprentice" as const,
+      completed_missions: mission?.status === "review_required" ? 1 : 0,
+      skills: [agent.skill],
+      disciplines: [
+        ["Product Discovery", "UX Requirements", "OSINT Authorization"],
+        ["Solution Architecture", "Source Intelligence", "Threat Modeling"],
+        ["Frontend Engineering", "Backend & API", "Cloud Integration"],
+        ["QA Automation", "AppSec Verification", "Site Reliability"],
+        ["Code Review", "Intelligence Validation", "Release Management"],
+      ][index],
+    })),
+    guild_tokens: mission?.status === "review_required" ? 25 : 0,
+    tool_badges:
+      mission?.status === "review_required" ? ["Mission Ledger"] : [],
   };
   return (
     <div className="app-shell">
@@ -962,6 +994,12 @@ export function App() {
           onClick={() => setTab("studio")}
         />
         <Nav
+          label="Forge Growth"
+          icon="✦"
+          active={tab === "forge"}
+          onClick={() => setTab("forge")}
+        />
+        <Nav
           label="Devices"
           icon="▣"
           active={tab === "devices"}
@@ -1034,6 +1072,8 @@ export function App() {
                   ? "Repository Health Quest"
                   : tab === "studio"
                     ? "Developer Studio"
+                    : tab === "forge"
+                      ? "Forge Growth Center"
                     : tab === "devices"
                       ? "Device Command Center"
                       : tab === "network"
@@ -1348,6 +1388,24 @@ export function App() {
               </div>
             </article>
           </section>
+        )}
+
+        {tab === "forge" && (
+          <ForgeGrowthCenter
+            profile={forgeGrowth}
+            missions={missions}
+            onTalk={() => setCopilotOpen(true)}
+            onQuest={() => setTab("quest")}
+            onKnowledge={() => setTab("knowledge")}
+            onSandbox={() => setTab("lab")}
+            onStudio={() => setTab("studio")}
+            onRelease={() => setTab("updates")}
+            onRefresh={() => {
+              void loadForgeProfile();
+              void loadMissions();
+              notify("Forge profile refreshed");
+            }}
+          />
         )}
 
         {tab === "devices" && (
