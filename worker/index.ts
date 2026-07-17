@@ -5,9 +5,10 @@ type AgentId = 'router' | 'planner' | 'builder' | 'tester' | 'reviewer'
 interface Mission { id: string; user_id: number; title: string; repository: string; status: string; plan: string; result?: string; created_at: string; updated_at: string }
 interface EventRecord { id?: number; mission_id: string; agent: AgentId; event_type: string; message: string; progress: number; evidence?: string; created_at?: string }
 interface KnowledgeHit { id: string; document_id: string; title: string; source_type: string; source_uri: string; trust_state: string; content: string; score: number }
+interface AuditContext { action: string; mission_id?: string; decision?: 'approved' | 'rejected' }
 
 const COOKIE = 'aios_session'
-const BUILD_ID = '2026.07.17-dcc1'
+const BUILD_ID = '2026.07.17-audit1'
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } })
 const error = (message: string, status = 400) => json({ error: message }, status)
 
@@ -21,6 +22,52 @@ function finalize(response: Response, request: Request, requestId: string) {
   secured.headers.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://127.0.0.1:4317; font-src 'self' data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'")
   if (new URL(request.url).protocol === 'https:') secured.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
   return secured
+}
+
+function auditAction(method: string, pathname: string) {
+  if (pathname === '/api/health') return 'health.check'
+  if (pathname === '/api/auth/status') return 'auth.status'
+  if (pathname === '/api/auth/setup') return 'auth.setup'
+  if (pathname === '/api/auth/login') return 'auth.login'
+  if (pathname === '/api/auth/logout') return 'auth.logout'
+  if (pathname === '/api/copilot') return 'copilot.request'
+  if (pathname === '/api/knowledge/search') return 'knowledge.search'
+  if (/^\/api\/knowledge\//.test(pathname) && method === 'DELETE') return 'knowledge.delete'
+  if (pathname === '/api/missions' && method === 'POST') return 'mission.create'
+  if (pathname === '/api/missions') return 'mission.list'
+  if (/\/approval$/.test(pathname)) return 'mission.approval'
+  if (/\/run$/.test(pathname)) return 'mission.run'
+  if (/^\/api\/missions\//.test(pathname)) return 'mission.read'
+  if (pathname === '/mcp') return 'mcp.metadata'
+  return pathname.startsWith('/api/') ? 'api.request' : 'asset.request'
+}
+
+function auditPath(pathname: string) {
+  return pathname
+    .replace(/\/api\/missions\/[a-f0-9]{12}/g, '/api/missions/:id')
+    .replace(/\/api\/knowledge\/[a-zA-Z0-9_-]{3,80}/g, '/api/knowledge/:id')
+}
+
+function writeAudit(request: Request, response: Response, requestId: string, startedAt: number, audit: AuditContext) {
+  const url = new URL(request.url)
+  const missionId = url.pathname.match(/^\/api\/missions\/([a-f0-9]{12})/)?.[1] || audit.mission_id
+  const record = {
+    event: 'aios.audit',
+    timestamp: new Date().toISOString(),
+    request_id: requestId,
+    build: BUILD_ID,
+    action: audit.action,
+    method: request.method,
+    route: auditPath(url.pathname),
+    status: response.status,
+    outcome: response.status < 400 ? 'success' : response.status < 500 ? 'denied_or_invalid' : 'error',
+    duration_ms: Math.max(0, Date.now() - startedAt),
+    ...(missionId ? { mission_id: missionId } : {}),
+    ...(audit.decision ? { decision: audit.decision } : {}),
+  }
+  if (response.status >= 500) console.error(record)
+  else if (response.status >= 400) console.warn(record)
+  else console.log(record)
 }
 
 function secureCookie(request: Request, value: string, maxAge = 604800) {
@@ -130,7 +177,7 @@ async function runInspection(env: Env, mission: Mission) {
   return result
 }
 
-async function apiHandler(request: Request, env: Env) {
+async function apiHandler(request: Request, env: Env, audit: AuditContext) {
   const url = new URL(request.url), method = request.method
   if (method !== 'GET' && !mutationAllowed(request)) return error('Cross-origin mutation blocked', 403)
   if (url.pathname === '/api/health' && method === 'GET') return json({ ok: true, service: 'AIOS Robot Guild', version: '1.1.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass' }, checked_at: new Date().toISOString() })
@@ -159,6 +206,7 @@ async function apiHandler(request: Request, env: Env) {
   }
   const owner = await requireUser(request, env)
   if (url.pathname === '/api/copilot' && method === 'POST') {
+    audit.action = 'copilot.request'
     const input = await body<{ question: string }>(request)
     if (!input.question?.trim() || input.question.length > 1000) return error('Question must contain 1 to 1000 characters', 422)
     return json(await copilotAnswer(env, owner, input.question.trim()))
@@ -174,14 +222,17 @@ async function apiHandler(request: Request, env: Env) {
   }
   const knowledgeMatch = url.pathname.match(/^\/api\/knowledge\/([a-zA-Z0-9_-]{3,80})$/)
   if (knowledgeMatch && method === 'DELETE') {
+    audit.action = 'knowledge.delete'
     await env.DB.prepare('DELETE FROM knowledge_documents WHERE id=? AND user_id=?').bind(knowledgeMatch[1], owner).run()
     return json({ ok: true })
   }
   if (url.pathname === '/api/missions' && method === 'GET') { const rows = await env.DB.prepare('SELECT * FROM missions WHERE user_id=? ORDER BY created_at DESC LIMIT 50').bind(owner).all<Mission>(); return json({ missions: rows.results }) }
   if (url.pathname === '/api/missions' && method === 'POST') {
+    audit.action = 'mission.create'
     const input = await body<{ title: string; repository: string }>(request); if (!input.title?.trim() || input.title.length > 180) return error('Mission goal is required', 422)
     try { repositoryParts(input.repository) } catch (problem) { return error(problem instanceof Error ? problem.message : 'Invalid repository', 422) }
     const id = crypto.randomUUID().replaceAll('-', '').slice(0, 12), plan = await planMission(env, input.title.trim(), input.repository)
+    audit.mission_id = id
     await env.DB.prepare("INSERT INTO missions(id,user_id,title,repository,status,plan) VALUES(?,?,?,?, 'awaiting_approval', ?)").bind(id, owner, input.title.trim(), input.repository, plan).run()
     await addEvent(env, { mission_id: id, agent: 'planner', event_type: 'plan_created', message: 'Read-only plan created. Human approval is required.', progress: 10 })
     return json({ mission: await missionForUser(env, id, owner), events: await eventsForMission(env, id) })
@@ -192,11 +243,13 @@ async function apiHandler(request: Request, env: Env) {
     if (!match[2] && method === 'GET') return json({ mission, events: await eventsForMission(env, mission.id) })
     if (match[2] === 'approval' && method === 'POST') {
       const input = await body<{ decision: string }>(request); if (!['approved', 'rejected'].includes(input.decision)) return error('Decision must be approved or rejected', 422)
+      audit.action = 'mission.approval'; audit.mission_id = mission.id; audit.decision = input.decision as 'approved' | 'rejected'
       if (mission.status !== 'awaiting_approval') return error('Mission is not awaiting approval', 409)
       await env.DB.batch([env.DB.prepare('INSERT INTO approvals(mission_id,user_id,decision) VALUES(?,?,?)').bind(mission.id, owner, input.decision), env.DB.prepare('UPDATE missions SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(input.decision, mission.id)])
       return json({ mission: await missionForUser(env, mission.id, owner) })
     }
     if (match[2] === 'run' && method === 'POST') {
+      audit.action = 'mission.run'; audit.mission_id = mission.id
       if (mission.status !== 'approved') return error('Approval is required before running', 403)
       try { await env.DB.prepare("UPDATE missions SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(mission.id).run(); await runInspection(env, mission); const completed = await missionForUser(env, mission.id, owner); const missionEvents = await eventsForMission(env, mission.id); if (completed) await rememberMission(env, completed, owner, missionEvents); return json({ mission: completed, events: missionEvents }) } catch (problem) { await env.DB.prepare("UPDATE missions SET status='failed',result=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(problem instanceof Error ? problem.message : 'Inspection failed', mission.id).run(); return error(problem instanceof Error ? problem.message : 'Inspection failed', 502) }
     }
@@ -208,10 +261,14 @@ export default {
   async fetch(request: Request, env: Env) {
     const url = new URL(request.url)
     const requestId = crypto.randomUUID()
+    const startedAt = Date.now()
+    const audit: AuditContext = { action: auditAction(request.method, url.pathname) }
     let response: Response
     if (url.pathname === '/mcp') response = json({ name: 'AIOS Robot Guild', protocolVersion: '2025-06-18', transport: 'https', build: BUILD_ID, tools: [{ name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }], authentication: 'owner session required for execution' })
-    else if (url.pathname.startsWith('/api/')) { try { response = await apiHandler(request, env) } catch (problem) { response = problem instanceof Response ? problem : error(problem instanceof Error ? problem.message : 'Unexpected error', 500) } }
+    else if (url.pathname.startsWith('/api/')) { try { response = await apiHandler(request, env, audit) } catch (problem) { response = problem instanceof Response ? problem : error(problem instanceof Error ? problem.message : 'Unexpected error', 500) } }
     else response = await env.ASSETS.fetch(request)
-    return finalize(response, request, requestId)
+    const secured = finalize(response, request, requestId)
+    writeAudit(request, secured, requestId, startedAt, audit)
+    return secured
   },
 } satisfies ExportedHandler<Env>

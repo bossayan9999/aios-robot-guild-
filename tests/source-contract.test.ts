@@ -27,7 +27,17 @@ describe('Robot Guild product contract', () => {
     expect(worker).toContain('X-Request-ID')
     expect(worker).toContain('Content-Security-Policy')
     expect(worker).toContain('Strict-Transport-Security')
-    expect(worker).toContain("const BUILD_ID = '2026.07.17-dcc1'")
+    expect(worker).toContain("const BUILD_ID = '2026.07.17-audit1'")
+  })
+
+  it('emits redacted structured audit events', () => {
+    const worker = readFileSync(new URL('../worker/index.ts', import.meta.url), 'utf8')
+    expect(worker).toContain("event: 'aios.audit'")
+    expect(worker).toContain("action: audit.action")
+    expect(worker).toContain('duration_ms:')
+    expect(worker).toContain("audit.action = 'mission.approval'")
+    expect(worker).not.toContain('request.headers.get(\'Authorization\')')
+    expect(worker).not.toContain('request.headers.get(\'Cookie\')')
   })
 
 })
