@@ -1,4 +1,4 @@
-const CACHE = 'aios-robot-guild-release1'
+const CACHE = 'aios-robot-guild-world1'
 const SHELL = ['/', '/manifest.webmanifest', '/guild-icon.svg']
 
 self.addEventListener('install', (event) => {

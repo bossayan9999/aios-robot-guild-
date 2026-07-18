@@ -26,9 +26,9 @@ export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', gu
     if (!host) return
     const scene = new THREE.Scene()
     scene.background = new THREE.Color('#06110f')
-    scene.fog = new THREE.Fog('#06110f', 9, 22)
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100)
-    camera.position.set(0, 4.1, 12)
+    scene.fog = new THREE.Fog('#071b1a', 20, 54)
+    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 120)
+    camera.position.set(0, 8.5, 21)
     const renderer = new THREE.WebGLRenderer({ antialias: quality !== 'low', alpha: false, powerPreference: 'high-performance' })
     const pixelRatio = quality === 'low' ? 1 : quality === 'balanced' ? 1.35 : 1.75
     renderer.setPixelRatio(Math.min(devicePixelRatio, pixelRatio))
@@ -40,9 +40,24 @@ export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', gu
 
     scene.add(new THREE.HemisphereLight('#bfffea', '#102b24', 2.2))
     const key = new THREE.DirectionalLight('#9ee8ff', 4); key.position.set(4, 8, 5); scene.add(key)
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 20), new THREE.MeshStandardMaterial({ color: '#081b17', roughness: .78, metalness: .18 }))
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(64, 48), new THREE.MeshStandardMaterial({ color: '#173d2a', roughness: .96, metalness: 0 }))
     floor.rotation.x = -Math.PI / 2; floor.position.y = -1.35; scene.add(floor)
-    const grid = new THREE.GridHelper(30, 30, '#1c7e65', '#103d33'); grid.position.y = -1.33; scene.add(grid)
+    const grid = new THREE.GridHelper(64, 32, '#2b7257', '#1f503e'); grid.position.y = -1.33; scene.add(grid)
+
+    // Wide original sandbox-game district with roads, trees and a quest plaza.
+    const roadMaterial = new THREE.MeshStandardMaterial({ color: '#31504a', roughness: .92 })
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(46, 4.4), roadMaterial); road.rotation.x = -Math.PI / 2; road.position.set(0, -1.29, -1.2); scene.add(road)
+    const crossRoad = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 31), roadMaterial); crossRoad.rotation.x = -Math.PI / 2; crossRoad.position.set(0, -1.285, -2); scene.add(crossRoad)
+    const plaza = new THREE.Mesh(new THREE.CylinderGeometry(6.2, 6.2, .13, 20), new THREE.MeshStandardMaterial({ color: '#284f46', roughness: .78, metalness: .12 })); plaza.position.set(0, -1.24, -2); scene.add(plaza)
+    const treeMaterial = new THREE.MeshStandardMaterial({ color: '#23865f', roughness: .9 })
+    const trunkMaterial = new THREE.MeshStandardMaterial({ color: '#72523a', roughness: 1 })
+    for (let index = 0; index < 24; index += 1) {
+      const side = index % 2 ? 1 : -1
+      const tree = new THREE.Group()
+      tree.add(new THREE.Mesh(new THREE.CylinderGeometry(.13, .2, 1.3, 7), trunkMaterial))
+      const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(.72 + (index % 3) * .08, 0), treeMaterial); crown.position.y = 1.05; tree.add(crown)
+      tree.position.set(side * (10.5 + (index % 6) * 2.7), -.68, -11 + Math.floor(index / 6) * 7.2); tree.rotation.y = index * .73; scene.add(tree)
+    }
 
     // Original MMORPG-style guild district: each specialist owns a building.
     const buildings: THREE.Group[] = []
@@ -55,8 +70,9 @@ export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', gu
       const roof = new THREE.Mesh(index === 4 ? new THREE.ConeGeometry(1.18, .75, 4) : new THREE.CylinderGeometry(.2, 1.08, .7, 4), trim); roof.position.y = 1; roof.rotation.y = Math.PI / 4; building.add(roof)
       const door = new THREE.Mesh(new THREE.BoxGeometry(.48, .72, .06), trim); door.position.set(0, -.24, .705); building.add(door)
       const beacon = new THREE.PointLight(color, 2.4, 4); beacon.position.set(0, 1.75, .2); building.add(beacon)
-      building.position.set((index - 2) * 3.25, -.72, -4.1)
-      building.scale.setScalar(.78)
+      const angle = (index / agents.length) * Math.PI * 1.45 + Math.PI * .78
+      building.position.set(Math.cos(angle) * 10.5, -.72, Math.sin(angle) * 7.3 - 2)
+      building.scale.setScalar(1.15)
       scene.add(building); buildings.push(building)
     })
 
@@ -65,33 +81,55 @@ export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', gu
     const foundation = new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.65, .35, 8), new THREE.MeshStandardMaterial({ color: '#23483e', metalness: .4 })); construction.add(foundation)
     const tower = new THREE.Mesh(new THREE.BoxGeometry(1.65, 3.4, 1.65), new THREE.MeshStandardMaterial({ color: '#b5d6cc', metalness: .72, roughness: .24 })); tower.position.y = 1.85; construction.add(tower)
     const core = new THREE.Mesh(new THREE.OctahedronGeometry(.42), new THREE.MeshStandardMaterial({ color: '#43edb5', emissive: '#20aa7d', emissiveIntensity: 2.5 })); core.position.y = 3.65; construction.add(core)
-    construction.position.set(0, -1.15, -1.75); scene.add(construction)
+    construction.position.set(0, -1.15, -2); scene.add(construction)
 
     const crane = new THREE.Group()
     const craneMat = new THREE.MeshStandardMaterial({ color: '#e1a83e', metalness: .6, roughness: .28 })
     const mast = new THREE.Mesh(new THREE.BoxGeometry(.16, 4.2, .16), craneMat); mast.position.y = .85; crane.add(mast)
     const boom = new THREE.Mesh(new THREE.BoxGeometry(3.3, .14, .14), craneMat); boom.position.set(.9, 2.8, 0); crane.add(boom)
-    crane.position.set(-2.2, -1.2, -1.9); scene.add(crane)
+    crane.position.set(-3.2, -1.2, -2.2); scene.add(crane)
 
     const robots: { id: AgentId; group: THREE.Group; face: THREE.Mesh; ring: THREE.Mesh }[] = []
     const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2()
     agents.forEach((agent, index) => {
-      const group = new THREE.Group(); group.position.x = (index - 2) * 2.15
+      const group = new THREE.Group()
+      const homeAngle = (index / agents.length) * Math.PI * 1.45 + Math.PI * .78
+      group.position.set(Math.cos(homeAngle) * 8.4, 0, Math.sin(homeAngle) * 5.8 - 2)
       const color = new THREE.Color(agent.color)
       const metal = new THREE.MeshStandardMaterial({ color: '#b8d8d0', metalness: .7, roughness: .25 })
       const dark = new THREE.MeshStandardMaterial({ color: '#102c27', metalness: .45, roughness: .35 })
       const glow = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.7 })
-      const body = new THREE.Mesh(new THREE.BoxGeometry(1.25, 1.2, .85, 3, 3, 3), metal); body.position.y = -.15; group.add(body)
-      const head = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.05, .95, 4, 4, 4), metal); head.position.y = 1.05; group.add(head)
-      const face = new THREE.Mesh(new THREE.PlaneGeometry(.92, .53), dark); face.position.set(0, 1.05, .486); group.add(face)
-      const eye = new THREE.Mesh(new THREE.BoxGeometry(.42, .11, .04), glow); eye.position.set(0, 1.08, .514); group.add(eye)
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(.58, .72, 6, 12), metal); body.position.y = -.08; group.add(body)
+      const chest = new THREE.Mesh(new THREE.SphereGeometry(.3, 18, 12), glow); chest.position.set(0, -.05, .53); chest.scale.y = .68; group.add(chest)
+      const head = new THREE.Mesh(new THREE.SphereGeometry(.78, 20, 14), metal); head.position.y = 1.18; head.scale.z = .78; group.add(head)
+      const face = new THREE.Mesh(new THREE.SphereGeometry(.59, 20, 12, -.82, 1.64, .65, 1.15), dark); face.position.set(0, 1.2, .17); face.rotation.x = -.18; group.add(face)
+      const eye = new THREE.Mesh(new THREE.CapsuleGeometry(.07, .32, 4, 8), glow); eye.position.set(0, 1.24, .6); eye.rotation.z = Math.PI / 2; group.add(eye)
+      const helmetRing = new THREE.Mesh(new THREE.TorusGeometry(.79, .065, 10, 32), glow); helmetRing.position.y = 1.18; helmetRing.rotation.x = Math.PI / 2; helmetRing.scale.z = .78; group.add(helmetRing)
+      const earMaterial = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: .75, metalness: .72 })
+      for (const side of [-1, 1]) {
+        const ear = new THREE.Mesh(new THREE.CylinderGeometry(.19, .19, .12, 12), earMaterial); ear.position.set(side * .75, 1.2, 0); ear.rotation.z = Math.PI / 2; group.add(ear)
+      }
+      const backpack = new THREE.Mesh(new THREE.CapsuleGeometry(.33, .42, 4, 10), dark); backpack.position.set(0, -.05, -.52); backpack.rotation.x = Math.PI / 2; group.add(backpack)
       const antenna = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .45), metal); antenna.position.y = 1.78; group.add(antenna)
       const tip = new THREE.Mesh(new THREE.SphereGeometry(.1, 14, 8), glow); tip.position.y = 2.02; group.add(tip)
       for (const side of [-1, 1]) {
-        const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.16, .7, 4, 8), metal); arm.position.set(side * .86, -.05, 0); arm.rotation.z = side * -.28; group.add(arm)
+        const arm = new THREE.Mesh(new THREE.CapsuleGeometry(.16, .7, 4, 8), metal); arm.position.set(side * .77, -.02, 0); arm.rotation.z = side * -.22; group.add(arm)
         const leg = new THREE.Mesh(new THREE.CapsuleGeometry(.18, .56, 4, 8), dark); leg.position.set(side * .35, -1, 0); group.add(leg)
       }
       const ring = new THREE.Mesh(new THREE.TorusGeometry(.85, .045, 8, 48), glow); ring.rotation.x = Math.PI / 2; ring.position.y = -1.28; group.add(ring)
+      // Each original robot carries a readable profession tool instead of looking like a block avatar.
+      if (agent.id === 'router') {
+        const compass = new THREE.Mesh(new THREE.TorusGeometry(.27, .045, 8, 24), glow); compass.position.set(.82, .15, .38); compass.rotation.y = Math.PI / 2; group.add(compass)
+      } else if (agent.id === 'planner') {
+        const tablet = new THREE.Mesh(new THREE.BoxGeometry(.48, .62, .08), dark); tablet.position.set(.72, .02, .48); tablet.rotation.z = -.18; group.add(tablet)
+        const screen = new THREE.Mesh(new THREE.PlaneGeometry(.35, .48), glow); screen.position.set(.72, .02, .525); screen.rotation.z = -.18; group.add(screen)
+      } else if (agent.id === 'builder') {
+        const wrench = new THREE.Mesh(new THREE.CapsuleGeometry(.055, .55, 4, 8), glow); wrench.position.set(.82, .05, .25); wrench.rotation.z = -.65; group.add(wrench)
+      } else if (agent.id === 'tester') {
+        const lens = new THREE.Mesh(new THREE.TorusGeometry(.23, .055, 8, 24), glow); lens.position.set(.77, .17, .46); lens.rotation.y = .2; group.add(lens)
+      } else {
+        const shield = new THREE.Mesh(new THREE.CircleGeometry(.35, 6), glow); shield.position.set(.72, .05, .49); shield.scale.y = 1.18; group.add(shield)
+      }
       group.userData.id = agent.id; scene.add(group); robots.push({ id: agent.id, group, face, ring })
     })
 
@@ -183,12 +221,15 @@ export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', gu
         const activeIndex = Math.max(0, agents.findIndex((agent) => agent.id === active))
         robots.forEach((robot, i) => {
           const selected = robot.id === active
-          const homeX = (i - 2) * 2.15
-          // The active robot travels between its station and the central forge.
-          const travel = selected && state.current.progress > 0 ? (Math.sin(t * 1.25) + 1) / 2 : 0
-          const workX = (i - 2) * .42
-          robot.group.position.x = THREE.MathUtils.lerp(robot.group.position.x, THREE.MathUtils.lerp(homeX, workX, travel * .78), .08)
-          robot.group.position.z = THREE.MathUtils.lerp(robot.group.position.z, selected ? -travel * 1.18 : 0, .07)
+          const homeAngle = (i / robots.length) * Math.PI * 1.45 + Math.PI * .78
+          const homeX = Math.cos(homeAngle) * 8.4
+          const homeZ = Math.sin(homeAngle) * 5.8 - 2
+          // Active specialists walk from their workshop through the plaza to the quest forge.
+          const travel = selected && state.current.progress > 0 ? (Math.sin(t * .72) + 1) / 2 : 0
+          const easedTravel = travel * travel * (3 - 2 * travel)
+          const workX = (i - 2) * .58
+          robot.group.position.x = THREE.MathUtils.lerp(robot.group.position.x, THREE.MathUtils.lerp(homeX, workX, easedTravel), .07)
+          robot.group.position.z = THREE.MathUtils.lerp(robot.group.position.z, THREE.MathUtils.lerp(homeZ, -1.1, easedTravel), .07)
           robot.group.position.y = Math.sin(t * 2 + i) * .035 + (selected ? Math.abs(Math.sin(t * 4)) * .09 : 0)
           robot.group.rotation.y = selected ? Math.sin(t * 3) * .18 : Math.sin(t * .65 + i) * .04
           robot.ring.visible = selected
@@ -198,9 +239,11 @@ export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', gu
         const route = Math.min(4, Math.floor(state.current.progress / 20))
         const next = Math.min(4, route + 1)
         const mix = (state.current.progress % 20) / 20
-        packet.position.x = THREE.MathUtils.lerp((route - 2) * 2.15, (next - 2) * 2.15, mix)
+        const routeAngle = (route / robots.length) * Math.PI * 1.45 + Math.PI * .78
+        const nextAngle = (next / robots.length) * Math.PI * 1.45 + Math.PI * .78
+        packet.position.x = THREE.MathUtils.lerp(Math.cos(routeAngle) * 8.4, Math.cos(nextAngle) * 8.4, mix)
         packet.position.y = -.55 + Math.sin(t * 4) * .12
-        packet.position.z = .65 + Math.sin(t * 2) * .08
+        packet.position.z = THREE.MathUtils.lerp(Math.sin(routeAngle) * 5.8 - 2, Math.sin(nextAngle) * 5.8 - 2, mix) + Math.sin(t * 2) * .08
         packet.rotation.x = t * 2
         packet.rotation.y = t * 2.4
         const buildScale = Math.max(.04, state.current.progress / 100)
@@ -227,9 +270,9 @@ export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', gu
 
         const followTarget = state.current.cameraMode === 'follow'
           ? robots[activeIndex].group.position.clone().add(new THREE.Vector3(0, .35, 0))
-          : new THREE.Vector3(0, .2, -1.1)
-        const distance = state.current.cameraMode === 'follow' ? Math.min(zoom, 9.4) : zoom
-        const desiredCamera = new THREE.Vector3(Math.sin(userYaw) * distance, state.current.cameraMode === 'follow' ? 2.35 : 4.1, Math.cos(userYaw) * distance).add(followTarget)
+          : new THREE.Vector3(0, .4, -2)
+        const distance = state.current.cameraMode === 'follow' ? Math.min(zoom, 9.4) : zoom * 1.55
+        const desiredCamera = new THREE.Vector3(Math.sin(userYaw) * distance, state.current.cameraMode === 'follow' ? 3.1 : 9.2, Math.cos(userYaw) * distance).add(followTarget)
         camera.position.lerp(desiredCamera, .06)
         camera.lookAt(followTarget)
       }
@@ -263,7 +306,7 @@ export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', gu
       <button onClick={() => setPaused((value) => !value)}>{paused ? 'Resume' : 'Pause'}</button>
       <label><span>Graphics</span><select value={quality} onChange={(event) => setQuality(event.target.value as GraphicsQuality)}><option value="low">LOW</option><option value="balanced">BALANCED</option><option value="cinematic">CINEMATIC</option></select></label>
     </div>
-    <div className="factory-help"><span>DRAG TO ORBIT</span><span>WHEEL / W-S TO ZOOM</span><span>SELECT A ROBOT</span></div>
+    <div className="factory-help"><span>DRAG TO EXPLORE</span><span>WHEEL / W-S TO ZOOM</span><span>SELECT A SPECIALIST</span><span>FOLLOW ACTIVE ROBOT</span></div>
     <div className={`guild-reward-signal ${missionStatus === 'completed' ? 'earned' : ''}`}><span>LEVEL {guildLevel}</span><span>◆ {guildTokens} GT</span><small>{missionStatus === 'completed' ? 'VERIFIED REWARD UNLOCKED' : 'REWARDS LOCKED UNTIL OWNER VERIFICATION'}</small></div>
   </div>
 }
