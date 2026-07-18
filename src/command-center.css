@@ -22,6 +22,7 @@
 .legend-robot{border:2px solid var(--accent)}
 .legend-forge{background:var(--gold);box-shadow:0 0 8px var(--gold)}
 .hall-state-legend small{margin-left:auto;color:#71978c}
+.guild-reward-signal{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 11px;border-top:1px solid var(--line);background:#07130f;color:var(--muted);font-size:9px}.guild-reward-signal>span{padding:4px 7px;border:1px solid var(--line);border-radius:999px;font-weight:900}.guild-reward-signal small{margin-left:auto}.guild-reward-signal.earned{color:#ffe29a;background:linear-gradient(90deg,#2a2110,#0c1b16);box-shadow:inset 0 1px #d49f37}.guild-reward-signal.earned>span{border-color:#9a762e}.verification-gate{display:grid;gap:10px;margin-top:14px;padding:13px;border:1px solid #9a762e;border-radius:12px;background:#2a2110}.verification-gate>div:first-child{display:grid;gap:4px}.verification-gate small{color:#e5c98e;line-height:1.45}.verification-gate .actions{margin:0}
 
 @media(max-width:900px){
   .factory-frame .factory-canvas{height:350px}

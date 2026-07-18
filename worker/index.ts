@@ -7,11 +7,11 @@ type AgentId = 'router' | 'planner' | 'builder' | 'tester' | 'reviewer'
 interface Mission { id: string; user_id: number; title: string; repository: string; status: string; plan: string; result?: string; created_at: string; updated_at: string }
 interface EventRecord { id?: number; mission_id: string; agent: AgentId; event_type: string; message: string; progress: number; evidence?: string; created_at?: string }
 interface KnowledgeHit { id: string; document_id: string; title: string; source_type: string; source_uri: string; trust_state: string; content: string; score: number }
-interface AuditContext { action: string; mission_id?: string; decision?: 'approved' | 'rejected' }
+interface AuditContext { action: string; mission_id?: string; decision?: 'approved' | 'rejected' | 'completed' | 'revision_requested' }
 interface PasskeyRow { id: string; user_id: number; name: string; public_key: ArrayBuffer; counter: number; transports: string; device_type: string; backed_up: number; created_at: string; last_used_at?: string }
 
 const COOKIE = 'aios_session'
-const BUILD_ID = '2026.07.18-hall1'
+const BUILD_ID = '2026.07.18-hall2'
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } })
 const error = (message: string, status = 400) => json({ error: message }, status)
 
@@ -161,10 +161,10 @@ async function planMission(env: Env, title: string, repository: string) {
 
 async function forgeProfile(env: Env, owner: number) {
   const [missions, memories, handoffs, agentRows] = await Promise.all([
-    env.DB.prepare("SELECT COUNT(*) AS count FROM missions WHERE user_id=? AND status='review_required'").bind(owner).first<{ count: number }>(),
+    env.DB.prepare("SELECT COUNT(*) AS count FROM missions WHERE user_id=? AND status='completed'").bind(owner).first<{ count: number }>(),
     env.DB.prepare('SELECT COUNT(*) AS count FROM knowledge_documents WHERE user_id=?').bind(owner).first<{ count: number }>(),
     env.DB.prepare('SELECT COUNT(*) AS count FROM mission_events e JOIN missions m ON m.id=e.mission_id WHERE m.user_id=?').bind(owner).first<{ count: number }>(),
-    env.DB.prepare("SELECT e.agent,COUNT(DISTINCT e.mission_id) AS count FROM mission_events e JOIN missions m ON m.id=e.mission_id WHERE m.user_id=? AND m.status='review_required' GROUP BY e.agent").bind(owner).all<{ agent: string; count: number }>(),
+    env.DB.prepare("SELECT e.agent,COUNT(DISTINCT e.mission_id) AS count FROM mission_events e JOIN missions m ON m.id=e.mission_id WHERE m.user_id=? AND m.status='completed' GROUP BY e.agent").bind(owner).all<{ agent: string; count: number }>(),
   ])
   const verifiedMissions = Number(missions?.count || 0)
   const memoryRecords = Number(memories?.count || 0)
@@ -400,7 +400,7 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
     await addEvent(env, { mission_id: id, agent: 'planner', event_type: 'plan_created', message: 'Read-only plan created. Human approval is required.', progress: 10 })
     return json({ mission: await missionForUser(env, id, owner), events: await eventsForMission(env, id) })
   }
-  const match = url.pathname.match(/^\/api\/missions\/([a-f0-9]{12})(?:\/(approval|run))?$/)
+  const match = url.pathname.match(/^\/api\/missions\/([a-f0-9]{12})(?:\/(approval|run|verification))?$/)
   if (match) {
     const mission = await missionForUser(env, match[1], owner); if (!mission) return error('Mission not found', 404)
     if (!match[2] && method === 'GET') return json({ mission, events: await eventsForMission(env, mission.id) })
@@ -414,7 +414,21 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
     if (match[2] === 'run' && method === 'POST') {
       audit.action = 'mission.run'; audit.mission_id = mission.id
       if (mission.status !== 'approved') return error('Approval is required before running', 403)
-      try { await env.DB.prepare("UPDATE missions SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(mission.id).run(); await runInspection(env, mission); const completed = await missionForUser(env, mission.id, owner); const missionEvents = await eventsForMission(env, mission.id); if (completed) await rememberMission(env, completed, owner, missionEvents); return json({ mission: completed, events: missionEvents }) } catch (problem) { await env.DB.prepare("UPDATE missions SET status='failed',result=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(problem instanceof Error ? problem.message : 'Inspection failed', mission.id).run(); return error(problem instanceof Error ? problem.message : 'Inspection failed', 502) }
+      try { await env.DB.prepare("UPDATE missions SET status='running',updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(mission.id).run(); await runInspection(env, mission); const completed = await missionForUser(env, mission.id, owner); const missionEvents = await eventsForMission(env, mission.id); return json({ mission: completed, events: missionEvents }) } catch (problem) { await env.DB.prepare("UPDATE missions SET status='failed',result=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(problem instanceof Error ? problem.message : 'Inspection failed', mission.id).run(); return error(problem instanceof Error ? problem.message : 'Inspection failed', 502) }
+    }
+    if (match[2] === 'verification' && method === 'POST') {
+      const input = await body<{ decision: string }>(request)
+      if (!['completed', 'revision_requested'].includes(input.decision)) return error('Decision must be completed or revision_requested', 422)
+      if (mission.status !== 'review_required') return error('Mission evidence is not awaiting final verification', 409)
+      audit.action = 'mission.verification'; audit.mission_id = mission.id; audit.decision = input.decision as 'completed' | 'revision_requested'
+      const missionEvents = await eventsForMission(env, mission.id)
+      await env.DB.batch([
+        env.DB.prepare('INSERT INTO approvals(mission_id,user_id,decision) VALUES(?,?,?)').bind(mission.id, owner, input.decision),
+        env.DB.prepare('UPDATE missions SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?').bind(input.decision, mission.id, owner),
+      ])
+      const verified = await missionForUser(env, mission.id, owner)
+      if (input.decision === 'completed' && verified) await rememberMission(env, verified, owner, missionEvents)
+      return json({ mission: verified, events: missionEvents, reward: input.decision === 'completed' ? { xp: 300, guild_tokens: 25 } : null })
     }
   }
   return error('API route not found', 404)

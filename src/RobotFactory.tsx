@@ -6,20 +6,20 @@ import type { AgentId } from './types'
 type GraphicsQuality = 'low' | 'balanced' | 'cinematic'
 type CameraMode = 'overview' | 'follow'
 
-interface Props { activeAgent: AgentId | null; progress: number; onSelect: (id: AgentId) => void }
+interface Props { activeAgent: AgentId | null; progress: number; missionStatus?: string; guildLevel?: number; guildTokens?: number; onSelect: (id: AgentId) => void }
 
 function initialQuality(): GraphicsQuality {
   if (typeof window === 'undefined') return 'balanced'
   return window.matchMedia('(max-width: 760px)').matches ? 'low' : 'balanced'
 }
 
-export function RobotFactory({ activeAgent, progress, onSelect }: Props) {
+export function RobotFactory({ activeAgent, progress, missionStatus = 'idle', guildLevel = 1, guildTokens = 0, onSelect }: Props) {
   const mount = useRef<HTMLDivElement>(null)
   const [quality, setQuality] = useState<GraphicsQuality>(initialQuality)
   const [cameraMode, setCameraMode] = useState<CameraMode>('overview')
   const [paused, setPaused] = useState(false)
-  const state = useRef({ activeAgent, progress, onSelect, cameraMode, paused })
-  state.current = { activeAgent, progress, onSelect, cameraMode, paused }
+  const state = useRef({ activeAgent, progress, missionStatus, guildLevel, guildTokens, onSelect, cameraMode, paused })
+  state.current = { activeAgent, progress, missionStatus, guildLevel, guildTokens, onSelect, cameraMode, paused }
 
   useEffect(() => {
     const host = mount.current
@@ -118,6 +118,18 @@ export function RobotFactory({ activeAgent, progress, onSelect }: Props) {
     const particles = new THREE.Points(particleGeometry, new THREE.PointsMaterial({ color: '#63e9bd', size: quality === 'cinematic' ? .04 : .025, transparent: true, opacity: .6 }))
     scene.add(particles)
 
+    // A reward crown appears only after the owner verifies the completed mission.
+    const rewardCrown = new THREE.Group()
+    const crownMaterial = new THREE.MeshStandardMaterial({ color: '#f4bd4d', emissive: '#c27a16', emissiveIntensity: 1.8, metalness: .75 })
+    for (let index = 0; index < 6; index += 1) {
+      const shard = new THREE.Mesh(new THREE.OctahedronGeometry(.12), crownMaterial)
+      const angle = index / 6 * Math.PI * 2
+      shard.position.set(Math.cos(angle) * .72, 4.35, Math.sin(angle) * .72 - 1.75)
+      rewardCrown.add(shard)
+    }
+    rewardCrown.visible = false
+    scene.add(rewardCrown)
+
     const resize = () => { const w = host.clientWidth, h = host.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix() }
     const observer = new ResizeObserver(resize); observer.observe(host); resize()
     let userYaw = 0
@@ -197,6 +209,11 @@ export function RobotFactory({ activeAgent, progress, onSelect }: Props) {
         core.visible = state.current.progress >= 80
         core.rotation.y = t
         core.position.y = .4 + 3.35 * buildScale
+        const missionCompleted = state.current.missionStatus === 'completed'
+        rewardCrown.visible = missionCompleted
+        rewardCrown.rotation.y = t * .8
+        rewardCrown.position.y = Math.sin(t * 2) * .08
+        crownMaterial.emissiveIntensity = missionCompleted ? 1.5 + Math.sin(t * 3) * .45 : 0
         crane.rotation.y = Math.sin(t * .45) * .34
         materials.forEach((material, index) => {
           const materialTravel = (t * .55 + index * .13 + state.current.progress / 100) % 1
@@ -247,5 +264,6 @@ export function RobotFactory({ activeAgent, progress, onSelect }: Props) {
       <label><span>Graphics</span><select value={quality} onChange={(event) => setQuality(event.target.value as GraphicsQuality)}><option value="low">LOW</option><option value="balanced">BALANCED</option><option value="cinematic">CINEMATIC</option></select></label>
     </div>
     <div className="factory-help"><span>DRAG TO ORBIT</span><span>WHEEL / W-S TO ZOOM</span><span>SELECT A ROBOT</span></div>
+    <div className={`guild-reward-signal ${missionStatus === 'completed' ? 'earned' : ''}`}><span>LEVEL {guildLevel}</span><span>◆ {guildTokens} GT</span><small>{missionStatus === 'completed' ? 'VERIFIED REWARD UNLOCKED' : 'REWARDS LOCKED UNTIL OWNER VERIFICATION'}</small></div>
   </div>
 }

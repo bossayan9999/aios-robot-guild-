@@ -58,7 +58,7 @@ type PasskeySummary = {
   created_at: string;
   last_used_at?: string;
 };
-const UI_BUILD = "2026.07.18-hall1";
+const UI_BUILD = "2026.07.18-hall2";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -493,6 +493,32 @@ export function App() {
       notify(error instanceof Error ? error.message : "Approval failed");
     }
   }
+  async function verifyMission(decision: "completed" | "revision_requested") {
+    if (!mission || mission.status !== "review_required") return;
+    if (!window.confirm(decision === "completed"
+      ? "Verify this evidence and complete the mission?\n\nThis awards 300 XP and 25 Guild Tokens."
+      : "Request a revision?\n\nNo XP or tokens will be awarded.")) return;
+    if (demoMode) {
+      setMission({ ...mission, status: decision });
+      if (decision === "completed") {
+        setXp((value) => value + 300);
+        notify("+300 XP • +25 GT • Owner-verified mission");
+      } else notify("Revision requested • no reward awarded");
+      return;
+    }
+    try {
+      const data = await api<{ mission: Mission; events: MissionEvent[]; reward: { xp: number; guild_tokens: number } | null }>(
+        `/api/missions/${mission.id}/verification`,
+        { method: "POST", body: JSON.stringify({ decision }) },
+      );
+      setMission(data.mission);
+      if (data.reward) notify(`+${data.reward.xp} XP • +${data.reward.guild_tokens} GT • Mission verified`);
+      else notify("Revision requested • no reward awarded");
+      await Promise.all([loadForgeProfile(), loadMissions()]);
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Final verification failed");
+    }
+  }
   function runDemo(base: Mission) {
     setEvents([]);
     demoEvents.forEach((event, index) =>
@@ -508,8 +534,7 @@ export function App() {
               result:
                 "Demo evidence complete. Connect Cloudflare D1 to run the real public-repository inspection.",
             });
-            setXp((value) => value + 100);
-            notify("+100 XP • Demo quest complete");
+            notify("Evidence ready • owner verification required for rewards");
           }
         },
         650 * (index + 1),
@@ -529,9 +554,7 @@ export function App() {
           setProgress(event.progress);
           if (index === verifiedEvents.length - 1) {
             setMission(verifiedMission);
-            setXp((value) => value + 150);
-            void loadForgeProfile();
-            notify("+150 XP • Verified quest complete");
+            notify("Evidence ready • owner verification required for rewards");
           }
         },
         700 * (index + 1),
@@ -860,7 +883,7 @@ export function App() {
     level,
     xp,
     next_level_xp: Math.max(0, 250 - xpInLevel),
-    verified_missions: mission?.status === "review_required" ? 1 : 0,
+    verified_missions: mission?.status === "completed" ? 1 : 0,
     memory_records: knowledgeHits.length,
     recorded_handoffs: events.length,
     skills: agents
@@ -876,10 +899,10 @@ export function App() {
         "Quality & Verification Engineer",
         "Release & Intelligence Review Engineer",
       ][index],
-      xp: mission?.status === "review_required" ? 100 : 0,
+      xp: mission?.status === "completed" ? 100 : 0,
       level: 1,
       rank: "Apprentice" as const,
-      completed_missions: mission?.status === "review_required" ? 1 : 0,
+      completed_missions: mission?.status === "completed" ? 1 : 0,
       skills: [agent.skill],
       disciplines: [
         ["Product Discovery", "UX Requirements", "OSINT Authorization"],
@@ -889,9 +912,9 @@ export function App() {
         ["Code Review", "Intelligence Validation", "Release Management"],
       ][index],
     })),
-    guild_tokens: mission?.status === "review_required" ? 25 : 0,
+    guild_tokens: mission?.status === "completed" ? 25 : 0,
     tool_badges:
-      mission?.status === "review_required" ? ["Mission Ledger"] : [],
+      mission?.status === "completed" ? ["Mission Ledger"] : [],
   };
   return (
     <div className="app-shell">
@@ -1131,6 +1154,9 @@ export function App() {
                 <RobotFactory
                   activeAgent={activeAgent}
                   progress={progress}
+                  missionStatus={mission?.status}
+                  guildLevel={forgeGrowth.level}
+                  guildTokens={forgeGrowth.guild_tokens}
                   onSelect={(id) => {
                     setActiveAgent(id);
                     notify(
@@ -1206,6 +1232,12 @@ export function App() {
                   >
                     Approve and run
                   </button>
+                </div>
+              )}
+              {mission?.status === "review_required" && (
+                <div className="verification-gate">
+                  <div><b>Final owner verification</b><small>Review the evidence. Rewards remain locked until you confirm the mission is complete.</small></div>
+                  <div className="actions"><button onClick={() => verifyMission("revision_requested")}>Request revision</button><button className="primary" onClick={() => verifyMission("completed")}>Verify completion</button></div>
                 </div>
               )}
               <div className="event-list">
