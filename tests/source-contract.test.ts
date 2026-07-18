@@ -28,8 +28,8 @@ describe('Robot Guild product contract', () => {
     expect(worker).toContain('X-Request-ID')
     expect(worker).toContain('Content-Security-Policy')
     expect(worker).toContain('Strict-Transport-Security')
-    expect(worker).toContain("const BUILD_ID = '2026.07.18-guild3'")
-    expect(app).toMatch(/const UI_BUILD = ["']2026\.07\.18-guild3["']/)
+    expect(worker).toContain("const BUILD_ID = '2026.07.18-hall1'")
+    expect(app).toMatch(/const UI_BUILD = ["']2026\.07\.18-hall1["']/)
   })
 
   it('emits redacted structured audit events', () => {
@@ -93,6 +93,18 @@ describe('Robot Guild product contract', () => {
     expect(dashboard).toContain('EVIDENCE VAULT')
     expect(dashboard).toContain("onNavigate('quest')")
     expect(dashboard).not.toContain('dangerouslySetInnerHTML')
+  })
+
+  it('keeps the 3D Guild Hall interactive, mission-linked and mobile adjustable', () => {
+    const hall = readFileSync(new URL('../src/RobotFactory.tsx', import.meta.url), 'utf8')
+    const dashboard = readFileSync(new URL('../src/GuildCommandCenter.tsx', import.meta.url), 'utf8')
+    expect(hall).toContain('Interactive 3D Robot Guild Hall')
+    expect(hall).toContain("type GraphicsQuality = 'low' | 'balanced' | 'cinematic'")
+    expect(hall).toContain('DRAG TO ORBIT')
+    expect(hall).toContain('Follow robot')
+    expect(hall).toContain('state.current.progress')
+    expect(dashboard).toContain('The scene visualizes recorded mission state; it does not execute work by itself.')
+    expect(hall).not.toContain('fetch(')
   })
 
   it('keeps Forge communication interactive and browser-permission gated', () => {

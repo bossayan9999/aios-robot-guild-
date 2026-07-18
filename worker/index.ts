@@ -11,7 +11,7 @@ interface AuditContext { action: string; mission_id?: string; decision?: 'approv
 interface PasskeyRow { id: string; user_id: number; name: string; public_key: ArrayBuffer; counter: number; transports: string; device_type: string; backed_up: number; created_at: string; last_used_at?: string }
 
 const COOKIE = 'aios_session'
-const BUILD_ID = '2026.07.18-guild3'
+const BUILD_ID = '2026.07.18-hall1'
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } })
 const error = (message: string, status = 400) => json({ error: message }, status)
 

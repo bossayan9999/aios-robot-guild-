@@ -58,7 +58,7 @@ type PasskeySummary = {
   created_at: string;
   last_used_at?: string;
 };
-const UI_BUILD = "2026.07.18-guild3";
+const UI_BUILD = "2026.07.18-hall1";
 
 type SpeechRecognitionLike = {
   lang: string;

@@ -63,14 +63,20 @@ export function GuildCommandCenter(props: GuildCommandCenterProps) {
     <div className="command-main-grid">
       <article className="command-factory panel-card">
         <div className="command-card-head">
-          <div><p className="kicker">LIVE GUILD DISTRICT</p><h2>Robot task arena</h2></div>
+          <div><p className="kicker">LIVE GUILD DISTRICT • INTERACTIVE 3D</p><h2>Robot Guild Hall</h2></div>
           <div className="mission-progress-orb"><span>{props.progress}%</span></div>
         </div>
         <div className="factory-frame">
           {props.factory}
-          <div className="factory-hud"><span>● REAL-TIME PARTY VIEW</span><span>{active.name} • {stageState(props.progress, props.agents.findIndex(agent => agent.id === active.id), true).toUpperCase()}</span></div>
+          <div className="factory-hud"><span>● MISSION-LINKED PARTY VIEW</span><span>{active.name} • {stageState(props.progress, props.agents.findIndex(agent => agent.id === active.id), true).toUpperCase()}</span></div>
         </div>
         <div className="command-progress"><span style={{ width: `${props.progress}%` }} /></div>
+        <div className="hall-state-legend" aria-label="Guild Hall state legend">
+          <span><i className="legend-packet" />Data packet</span>
+          <span><i className="legend-robot" />Working specialist</span>
+          <span><i className="legend-forge" />Verified build growth</span>
+          <small>The scene visualizes recorded mission state; it does not execute work by itself.</small>
+        </div>
         <div className="agent-handoff" aria-label="Agent pipeline">
           {props.agents.map((agent, index) => {
             const state = stageState(props.progress, index, props.activeAgent === agent.id)

@@ -4,3 +4,34 @@
 @media(max-width:900px){.command-banner{align-items:flex-start;flex-direction:column;padding:18px}.command-banner-actions{justify-content:flex-start}.command-metrics{grid-template-columns:1fr 1fr}.factory-frame .factory-canvas{height:330px}.agent-handoff{overflow-x:auto;grid-template-columns:repeat(5,minmax(130px,1fr));padding-bottom:4px}.operation-grid{grid-template-columns:1fr}.guild-command-center{padding-bottom:12px}}
 @media(max-width:560px){.command-metrics{grid-template-columns:1fr}.command-banner-actions button{flex:1}.command-card-head{align-items:flex-start}.mission-progress-orb{width:56px;height:56px}.mission-progress-orb:before{width:44px;height:44px}.factory-frame .factory-canvas{height:290px}.factory-hud{font-size:7px}.skill-roster{grid-template-columns:1fr}.intel-actions{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.agent-node.active{animation:none}}
+
+/* Browser-native 3D Guild Hall controls. The scene stays usable on touch and low-power devices. */
+.factory-experience{position:relative}
+.factory-canvas canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+.factory-canvas canvas:active{cursor:grabbing}
+.factory-scene-controls{position:absolute;z-index:4;right:12px;bottom:34px;display:flex;align-items:center;gap:6px;padding:6px;border:1px solid #2d7864;border-radius:12px;background:#03100de8;backdrop-filter:blur(10px)}
+.factory-scene-controls button{padding:7px 9px;font-size:9px;background:#092019}
+.factory-scene-controls button.active{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 13px #42e5ae22}
+.factory-scene-controls label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:8px;font-weight:900;letter-spacing:.08em}
+.factory-scene-controls select{border:1px solid var(--line);border-radius:7px;background:#071713;color:var(--text);padding:7px;font-size:9px}
+.factory-help{position:absolute;z-index:3;left:12px;bottom:10px;display:flex;gap:12px;color:#8cb8aa;font:700 7px monospace;letter-spacing:.08em}
+.hall-state-legend{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin:-2px 0 12px;color:var(--muted);font-size:8px;font-weight:800;letter-spacing:.04em}
+.hall-state-legend>span{display:flex;align-items:center;gap:5px}
+.hall-state-legend i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.legend-packet{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.legend-robot{border:2px solid var(--accent)}
+.legend-forge{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+.hall-state-legend small{margin-left:auto;color:#71978c}
+
+@media(max-width:900px){
+  .factory-frame .factory-canvas{height:350px}
+  .factory-scene-controls{left:10px;right:10px;bottom:30px;overflow-x:auto;justify-content:flex-start}
+  .factory-scene-controls>*{flex:0 0 auto}
+  .hall-state-legend small{width:100%;margin-left:0}
+}
+@media(max-width:560px){
+  .factory-frame .factory-canvas{height:320px}
+  .factory-hud span:first-child{display:none}
+  .factory-help{gap:7px}
+  .factory-help span:nth-child(2){display:none}
+}
