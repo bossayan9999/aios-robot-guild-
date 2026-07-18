@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="AIOS ONE multi-agent workspace">
+  <title>AIOS ONE</title><link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="stars"></div>
+<aside class="sidebar">
+  <div class="brand"><div class="logo">A1</div><div><h1>AIOS ONE</h1><p>Agentic company OS</p></div></div>
+  <div id="workspacePicker" class="workspace-picker"><small>ACTIVE WORKSPACE</small><select id="workspaceSelect" disabled><option>Demo workspace</option></select><button id="newOrgBtn" class="mini" hidden>+ Organization</button></div>
+  <button class="nav active" data-panel="workspace">◈ Command Center</button>
+  <button class="nav" data-panel="missions">◎ Missions</button>
+  <button class="nav" data-panel="agents">◇ Agent Guild</button>
+  <button class="nav" data-panel="memory">▣ Project Brain</button>
+  <button class="nav" data-panel="files">⇧ Data Intake</button>
+  <button class="nav" data-panel="audit">≡ Audit Trail</button>
+  <button class="nav" data-panel="settings">⚙ Connections</button>
+  <div class="status"><span></span><b id="systemStatus"> Demo mode</b><small id="connectionDetail">Connect Supabase to enable persistence</small></div>
+</aside>
+<main>
+  <header><div><div class="eyebrow">MISSION CONTROL / PRODUCTION FOUNDATION</div><h2 id="pageTitle">Command Center</h2><p>Plan, approve, execute, and audit work across your AI company.</p></div><div class="account"><span id="userLabel">Guest</span><button id="authBtn">Sign in</button><button id="signOutBtn" hidden>Sign out</button></div></header>
+
+  <section id="workspace" class="panel show">
+    <div class="metrics"><article><small>SYSTEM</small><strong id="healthMetric">ONLINE</strong><span>FastAPI control plane</span></article><article><small>WORKSPACES</small><strong id="workspaceMetric">DEMO</strong><span>Personal + organizations</span></article><article><small>MISSIONS</small><strong id="missionMetric">0</strong><span>Persistent mission records</span></article><article><small>SECURITY</small><strong>RLS</strong><span>Database-enforced isolation</span></article></div>
+    <div class="hero"><div class="input-card"><div class="section-title"><div><small>NEW MISSION</small><h3>What should the guild build?</h3></div><span class="badge">Approval gated</span></div><textarea id="task" maxlength="4000" placeholder="Describe a software, research, security, or operations mission..."></textarea><div class="controls"><select id="mode"><option value="balanced">Balanced</option><option value="fast">Fast</option><option value="deep">Deep review</option></select><input id="loops" aria-label="Improvement loops" type="range" min="1" max="8" value="3"><span id="loopLabel">3 loops</span><button id="runBtn">Launch mission</button></div></div><div class="score-card"><div class="ring"><span id="quality">0%</span></div><p>Quality gate</p><small>Plan → Build → Review</small></div></div>
+    <div class="grid"><section class="agent-map" id="agentMap"></section><section class="console"><div class="console-head"><b>Live execution stream</b><button id="clearBtn" class="mini">Clear</button></div><div id="log"><div class="empty">Launch a mission to watch the specialist guild coordinate.</div></div></section></div>
+    <section class="final"><div class="section-title"><h3>Mission output</h3><span class="badge" id="outputStatus">Waiting</span></div><pre id="finalOutput">Your verified result will appear here.</pre></section>
+  </section>
+
+  <section id="missions" class="panel"><div class="panel-head"><div><small>WORK QUEUE</small><h2>Persistent Missions</h2></div><button id="refreshMissions" class="mini">Refresh</button></div><div id="missionList" class="records"><div class="empty">Sign in to load persistent missions.</div></div></section>
+  <section id="agents" class="panel"><div class="panel-head"><div><small>DEPARTMENTS</small><h2>Specialist Agent Guild</h2></div></div><div class="agent-list" id="agentList"></div></section>
+  <section id="memory" class="panel"><div class="panel-head"><div><small>VERIFIED KNOWLEDGE</small><h2>Project Brain</h2></div></div><div class="memory-box" id="memoryBox">Mission insights appear here during execution. Persistent knowledge indexing is the next guarded capability.</div></section>
+  <section id="files" class="panel"><div class="panel-head"><div><small>CONTROLLED INPUT</small><h2>Data Intake</h2></div></div><div class="upload-zone"><input id="fileInput" type="file" accept=".txt,.md,.csv,.json,.pdf,.png,.jpg,.jpeg,.webp"><button id="uploadBtn">Upload file</button><p>Allowed files only · Maximum 10 MB</p><div id="uploadResult"></div></div></section>
+  <section id="audit" class="panel"><div class="panel-head"><div><small>ACCOUNTABILITY</small><h2>Audit Trail</h2></div><button id="refreshAudit" class="mini">Refresh</button></div><div id="auditList" class="records"><div class="empty">Sign in to view workspace events.</div></div></section>
+  <section id="settings" class="panel"><div class="panel-head"><div><small>PRODUCTION CONNECTIONS</small><h2>System Configuration</h2></div></div><div class="settings-grid"><article><b>Supabase</b><span id="supabaseState">Not configured</span><p>Authentication, PostgreSQL persistence, tenant RLS, and audit history.</p></article><article><b>Cloudflare / VPS</b><span>Deployment ready</span><p>Container health endpoint: <code>/api/health</code></p></article><article><b>AI providers</b><span>Guarded placeholder</span><p>Server-side provider keys only. Never enter secret keys in the browser.</p></article></div></section>
+</main>
+
+<dialog id="authDialog"><form method="dialog" id="authForm"><button class="dialog-close" value="cancel">×</button><div class="logo auth-logo">A1</div><h2>Access AIOS ONE</h2><p>Sign in or create your personal workspace.</p><label>Email<input id="authEmail" type="email" required autocomplete="email"></label><label>Password<input id="authPassword" type="password" minlength="8" required autocomplete="current-password"></label><label id="nameField" hidden>Display name<input id="authName" maxlength="60" autocomplete="name"></label><button id="authSubmit" type="submit" value="default">Sign in</button><button id="authMode" type="button" class="link">Need an account? Create one</button><div id="authError" class="error"></div></form></dialog>
+<dialog id="orgDialog"><form method="dialog" id="orgForm"><button class="dialog-close" value="cancel">×</button><h2>Create organization</h2><label>Name<input id="orgName" required maxlength="80"></label><label>Slug<input id="orgSlug" required pattern="[a-z0-9][a-z0-9-]{1,62}[a-z0-9]"></label><button type="submit" value="default">Create workspace</button><div id="orgError" class="error"></div></form></dialog>
+<div id="toast" role="status"></div>
+<script>window.AIOS_CONFIG={{ {"supabaseUrl": supabase_url, "supabaseKey": supabase_publishable_key}|tojson }};window.AGENTS={{ agents|tojson }};</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="/static/js/app.js"></script>
+</body></html>
