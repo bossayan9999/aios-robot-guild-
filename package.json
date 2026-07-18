@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
+    "smoke": "node tests/smoke.mjs",
     "lint": "tsc -b --pretty false",
     "deploy": "npm run build && wrangler deploy"
   },

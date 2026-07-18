@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AIOS Robot Guild">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#42e5ae"/><stop offset="1" stop-color="#69adff"/></linearGradient></defs>
+  <rect width="512" height="512" rx="120" fill="#071713"/>
+  <path d="M256 68 420 162v188L256 444 92 350V162Z" fill="url(#g)" stroke="#dffef3" stroke-width="18"/>
+  <rect x="145" y="169" width="222" height="176" rx="58" fill="#071713"/>
+  <circle cx="213" cy="248" r="22" fill="#42e5ae"/><circle cx="299" cy="248" r="22" fill="#69adff"/>
+  <path d="M202 302q54 40 108 0" fill="none" stroke="#dffef3" stroke-width="17" stroke-linecap="round"/>
+  <path d="M256 169v-35" stroke="#dffef3" stroke-width="16" stroke-linecap="round"/><circle cx="256" cy="121" r="17" fill="#f4bd4d"/>
+</svg>

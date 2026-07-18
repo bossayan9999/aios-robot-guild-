@@ -11,7 +11,7 @@ interface AuditContext { action: string; mission_id?: string; decision?: 'approv
 interface PasskeyRow { id: string; user_id: number; name: string; public_key: ArrayBuffer; counter: number; transports: string; device_type: string; backed_up: number; created_at: string; last_used_at?: string }
 
 const COOKIE = 'aios_session'
-const BUILD_ID = '2026.07.18-hall2'
+const BUILD_ID = '2026.07.18-release1'
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) => Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } })
 const error = (message: string, status = 400) => json({ error: message }, status)
 
@@ -235,7 +235,11 @@ async function runInspection(env: Env, mission: Mission) {
 async function apiHandler(request: Request, env: Env, audit: AuditContext) {
   const url = new URL(request.url), method = request.method
   if (method !== 'GET' && !mutationAllowed(request)) return error('Cross-origin mutation blocked', 403)
-  if (url.pathname === '/api/health' && method === 'GET') return json({ ok: true, service: 'AIOS Robot Guild', version: '1.1.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass' }, checked_at: new Date().toISOString() })
+  if (url.pathname === '/api/health' && method === 'GET') {
+    let database = 'pass'
+    try { await env.DB.prepare('SELECT 1 AS ready').first() } catch { database = 'fail' }
+    return json({ ok: database === 'pass', service: 'AIOS Robot Guild', version: '1.2.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
+  }
   if (url.pathname === '/api/auth/status' && method === 'GET') {
     const id = await userId(request, env); const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()
     const user = id ? await env.DB.prepare('SELECT email FROM users WHERE id=?').bind(id).first<{ email: string }>() : null

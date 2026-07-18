@@ -74,7 +74,8 @@ export interface DeploymentHealth {
   service: string
   version: string
   build: string
-  checks: { worker: string; assets: string }
+  checks: { worker: string; assets: string; database?: string }
+  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean }
   checked_at: string
   request_id?: string
 }

@@ -1,0 +1,14 @@
+{
+  "name": "AIOS Robot Guild",
+  "short_name": "Robot Guild",
+  "description": "Owner-controlled agentic engineering, OSINT and learning guild.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#06110f",
+  "theme_color": "#071713",
+  "categories": ["developer", "productivity", "education"],
+  "icons": [
+    { "src": "/guild-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -19,3 +19,9 @@ import './guild-rewards.css'
 import './strong-team.css'
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)
+
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js').catch(() => undefined)
+  })
+}

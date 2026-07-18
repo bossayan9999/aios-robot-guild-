@@ -28,8 +28,23 @@ describe('Robot Guild product contract', () => {
     expect(worker).toContain('X-Request-ID')
     expect(worker).toContain('Content-Security-Policy')
     expect(worker).toContain('Strict-Transport-Security')
-    expect(worker).toContain("const BUILD_ID = '2026.07.18-hall2'")
-    expect(app).toMatch(/const UI_BUILD = ["']2026\.07\.18-hall2["']/)
+    expect(worker).toContain("const BUILD_ID = '2026.07.18-release1'")
+    expect(app).toMatch(/const UI_BUILD = ["']2026\.07\.18-release1["']/)
+    expect(worker).toContain("database = 'fail'")
+    expect(worker).toContain("pwa: true")
+  })
+
+  it('is installable on mobile without caching private API responses', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+    const main = readFileSync(new URL('../src/main.tsx', import.meta.url), 'utf8')
+    const manifest = readFileSync(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8')
+    const serviceWorker = readFileSync(new URL('../public/service-worker.js', import.meta.url), 'utf8')
+    expect(html).toContain('rel="manifest"')
+    expect(main).toContain("serviceWorker.register('/service-worker.js')")
+    expect(JSON.parse(manifest).display).toBe('standalone')
+    expect(serviceWorker).toContain("url.pathname.startsWith('/api/')")
+    expect(serviceWorker).toContain("url.pathname === '/mcp'")
+    expect(serviceWorker).not.toContain("cache.put('/api/")
   })
 
   it('emits redacted structured audit events', () => {
