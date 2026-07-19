@@ -1,7 +1,8 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
 .env
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-data/uploads/*
-!data/uploads/.gitkeep
+*.log
+*.tsbuildinfo
+.DS_Store
