@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "product": "Agentic Companion",
+  "release_stage": "bootstrap",
+  "capabilities": [
+    {
+      "id": "cloud_control_plane",
+      "label": "Cloud control plane",
+      "status": "planned",
+      "requires_approval": false
+    },
+    {
+      "id": "local_companion",
+      "label": "Local desktop companion",
+      "status": "planned",
+      "requires_approval": true
+    },
+    {
+      "id": "device_pairing",
+      "label": "Expiring device pairing",
+      "status": "planned",
+      "requires_approval": true
+    },
+    {
+      "id": "project_sandbox",
+      "label": "Project-root sandbox",
+      "status": "planned",
+      "requires_approval": false
+    },
+    {
+      "id": "durable_missions",
+      "label": "Durable agent missions",
+      "status": "planned",
+      "requires_approval": false
+    },
+    {
+      "id": "production_deploy",
+      "label": "Production deployment",
+      "status": "blocked",
+      "requires_approval": true
+    }
+  ],
+  "approval_gates": [
+    "production_deploy",
+    "protected_branch_merge",
+    "destructive_action",
+    "credential_operation",
+    "external_message",
+    "security_test_outside_authorized_lab"
+  ]
+}

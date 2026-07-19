@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies and build output
+node_modules/
+dist/
+build/
+.next/
+.wrangler/
+coverage/
+
+# Local databases and runtime state
+*.db
+*.db-shm
+*.db-wal
+data/
+uploads/
+logs/
+*.log
+
+# Python environments if selected later
+.venv/
+__pycache__/
+*.py[cod]
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
