@@ -6,6 +6,8 @@
   "branch": "feature/cyberscool-platform-foundation",
   "commit": "f3883dc",
   "completed_at": "2026-07-20",
+  "completion_evidence": ".aios/releases/evidence/v0.2-completion.json",
+  "evidence_captured_at": "2026-07-21",
   "next_release": "v0.3",
   "next_objective": "Core task engine and enforceable completion gates"
 }

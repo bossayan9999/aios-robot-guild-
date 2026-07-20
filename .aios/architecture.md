@@ -17,15 +17,17 @@ The repository currently provides a React and Vite PWA, a Cloudflare Worker API,
 
 The canonical lifecycle is:
 
-`draft -> planned -> awaiting_approval -> queued -> executing -> validating -> specialist_review -> security_review -> awaiting_completion_approval -> completed`
+`CREATED -> PLANNING -> WAITING_FOR_APPROVAL -> ASSIGNED -> SANDBOX_PROVISIONING -> RUNNING -> TESTING -> REVIEWING -> VALIDATING -> STAGING -> SECURITY_REVIEW -> WAITING_FOR_COMPLETION_APPROVAL -> COMPLETED`
 
-Exceptional states are `blocked`, `failed`, `cancelled`, and `rolled_back`.
+`STAGING` is conditional for work that produces a releasable or deployable artifact. Exceptional and repair states are `REPAIRING`, `FAILED`, `BLOCKED`, `CANCELLED`, and `ROLLED_BACK`. `REPAIRING` returns to `RUNNING` through a bounded, recorded retry; it is not a path around approval or validation.
 
 - Transitions are server-authoritative, append an audit event, and are idempotent.
-- `awaiting_approval` may be skipped only when policy classifies every planned action as pre-authorized and low risk.
-- A failed validation or review returns the task to `executing` with findings, or moves it to `blocked`/`failed`.
-- `completed` is reachable only through all gates in `.aios/completion-gates.md`.
+- `WAITING_FOR_APPROVAL` may be skipped only when policy classifies every planned action as pre-authorized and low risk.
+- A failed validation or review enters `REPAIRING` with findings, or moves the task to `BLOCKED`/`FAILED`.
+- `COMPLETED` is reachable only after `SECURITY_REVIEW` and `WAITING_FOR_COMPLETION_APPROVAL` and only when all gates in `.aios/completion-gates.md` pass.
 - Cancellation revokes pending leases and credentials; rollback is a new evidenced operation, not an erased history.
+
+The existing mission API remains compatible during migration. Its statuses map as follows: `awaiting_approval` to `WAITING_FOR_APPROVAL`, `approved` to `ASSIGNED`, `running` to `RUNNING`, `review_required` to `WAITING_FOR_COMPLETION_APPROVAL`, `completed` to `COMPLETED`, `revision_requested` to `REPAIRING`, and `rejected` to `CANCELLED`. `failed` maps to `FAILED`. New task-engine records use only the canonical states.
 
 ## Core domain records
 

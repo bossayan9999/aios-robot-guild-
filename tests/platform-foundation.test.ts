@@ -30,10 +30,13 @@ describe('CyberScool platform foundation', () => {
 
   it('keeps the canonical task lifecycle and exceptional states documented', () => {
     const architecture = readFoundation('architecture.md')
-    expect(architecture).toContain('draft -> planned -> awaiting_approval -> queued -> executing -> validating -> specialist_review -> security_review -> awaiting_completion_approval -> completed')
-    for (const state of ['blocked', 'failed', 'cancelled', 'rolled_back']) {
+    expect(architecture).toContain('CREATED -> PLANNING -> WAITING_FOR_APPROVAL -> ASSIGNED -> SANDBOX_PROVISIONING -> RUNNING -> TESTING -> REVIEWING -> VALIDATING -> STAGING -> SECURITY_REVIEW -> WAITING_FOR_COMPLETION_APPROVAL -> COMPLETED')
+    for (const state of ['REPAIRING', 'FAILED', 'BLOCKED', 'CANCELLED', 'ROLLED_BACK']) {
       expect(architecture).toContain(`\`${state}\``)
     }
+    const decision = readFileSync(new URL('../.aios/decisions/0002-task-state-machine.md', import.meta.url), 'utf8')
+    expect(decision).toContain('SECURITY_REVIEW -> WAITING_FOR_COMPLETION_APPROVAL -> COMPLETED')
+    expect(architecture).toContain('`review_required` to `WAITING_FOR_COMPLETION_APPROVAL`')
   })
 
   it('requires every completion gate before completion', () => {
@@ -51,6 +54,16 @@ describe('CyberScool platform foundation', () => {
     expect(sandbox).toContain('no host/container-engine socket')
     expect(connectors).toContain('Installation is not authorization')
     expect(connectors).toContain('Connector content is untrusted')
+  })
+
+  it('keeps completed release metadata linked to durable gate evidence', () => {
+    const release = JSON.parse(readFileSync(new URL('../.aios/releases/current-release.json', import.meta.url), 'utf8')) as { status: string; completion_evidence: string }
+    const evidence = JSON.parse(readFileSync(new URL('../.aios/releases/evidence/v0.2-completion.json', import.meta.url), 'utf8')) as { gates: Record<string, { status: string }>; residual_risks: string[] }
+    expect(release.status).toBe('completed')
+    expect(release.completion_evidence).toBe('.aios/releases/evidence/v0.2-completion.json')
+    expect(Object.keys(evidence.gates)).toEqual(['implementation', 'tests', 'validation', 'specialist_review', 'security_review', 'evidence_capture', 'required_approval'])
+    expect(Object.values(evidence.gates).every(gate => gate.status === 'passed')).toBe(true)
+    expect(evidence.residual_risks.length).toBeGreaterThan(0)
   })
 
   it('defines all required specialists', () => {

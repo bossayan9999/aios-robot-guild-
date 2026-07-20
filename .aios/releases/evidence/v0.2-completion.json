@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "release": "v0.2",
+  "name": "CyberScool application shell",
+  "implementation_commit": "f3883dc",
+  "branch": "feature/cyberscool-platform-foundation",
+  "captured_at": "2026-07-21",
+  "environment": {
+    "runtime": "Windows local development",
+    "full_stack_url": "http://127.0.0.1:8787",
+    "deployment_scope": "local verification only"
+  },
+  "gates": {
+    "implementation": {
+      "status": "passed",
+      "evidence": "CyberScool shell, ten primary areas plus Settings, typed API/state/domain layers, mobile layout, and optional Guild View are present in f3883dc."
+    },
+    "tests": {
+      "status": "passed",
+      "command": "npm test",
+      "result": "4 test files passed; 26 tests passed"
+    },
+    "validation": {
+      "status": "passed",
+      "checks": [
+        "npm run lint: passed",
+        "npm run build: passed; 64 modules transformed",
+        "npm run smoke with AIOS_BASE_URL=http://127.0.0.1:8787: 8 endpoint checks passed",
+        "Worker, assets, and D1 health: pass"
+      ]
+    },
+    "specialist_review": {
+      "status": "passed",
+      "scope": "Product architecture, navigation, completion-state rendering, connection-state truthfulness, responsive behavior, and preservation of Guild View",
+      "result": "No fake configured connector or runtime state found; deferred capability is disabled or labeled Not configured."
+    },
+    "security_review": {
+      "status": "passed",
+      "scope": "Authentication boundary preservation, secret exposure, external writes, terminal claims, approval controls, and completion rendering",
+      "result": "No backend authorization boundary was weakened, no secret material was introduced, and unavailable high-risk controls remain disabled."
+    },
+    "evidence_capture": {
+      "status": "passed",
+      "artifacts": [
+        ".aios/releases/v0.2-app-shell.md",
+        "tests/cyberscool-shell.test.ts",
+        "tests/platform-foundation.test.ts",
+        "tests/smoke.mjs"
+      ]
+    },
+    "required_approval": {
+      "status": "passed",
+      "scope": "Feature-branch implementation and validation only",
+      "constraint": "No merge to main and no production deployment"
+    }
+  },
+  "review_findings_resolved": [
+    "Canonical task lifecycle reconciled between architecture.md and ADR 0002.",
+    "Durable v0.2 completion evidence linked from current-release.json."
+  ],
+  "residual_risks": [
+    "The current Worker mission API still uses legacy statuses; canonical task-engine enforcement is scheduled for v0.3.",
+    "Connectors, remote runtimes, emergency stop, research persistence, and live network operations remain Not configured.",
+    "The optional Three.js RobotFactory production chunk remains larger than 500 kB and should be optimized in a later performance pass.",
+    "This evidence verifies a local full-stack environment, not a production deployment."
+  ]
+}

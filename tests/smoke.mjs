@@ -8,7 +8,7 @@ async function check(path, expected, inspect) {
   console.log(`PASS ${String(response.status).padEnd(3)} ${path}`)
 }
 
-await check('/', [200], (body) => { if (!body.includes('AIOS Robot Guild')) throw new Error('App shell title missing') })
+await check('/', [200], (body) => { if (!body.includes('CyberScool')) throw new Error('CyberScool app shell title missing') })
 await check('/api/health', [200], (body) => {
   const health = JSON.parse(body)
   if (!health.ok || health.checks?.database !== 'pass') throw new Error('Worker or D1 health failed')
