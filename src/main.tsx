@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { App } from './App'
+import { CyberScoolApp } from './CyberScoolApp'
 import './styles.css'
 import './knowledge.css'
 import './devices.css'
@@ -18,7 +18,7 @@ import './sandbox-loop.css'
 import './guild-rewards.css'
 import './strong-team.css'
 
-createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)
+createRoot(document.getElementById('root')!).render(<StrictMode><CyberScoolApp /></StrictMode>)
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {

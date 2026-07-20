@@ -1,9 +1,13 @@
-# AIOS Robot Guild
+# CyberScool
 
-Reconstructed, upgradeable source for the AIOS Robot Guild: a game-style agent workflow with a real Cloudflare Worker/D1 foundation and an approval-gated Repository Health Quest.
+A secure agentic research and engineering operations platform with a responsive SaaS dashboard, a real Cloudflare Worker/D1 foundation, approval-gated tasks, and the original 3D Robot Guild preserved as an optional Guild View.
 
 ## Working features
 
+- Professional CyberScool shell with typed navigation across Mission Control, Copilot Manager, Specialists, R&D, Development Studio, Network Center, Integrations, Runtime Center, Audit & Security, Guild View, and Settings
+- Backend-compatible vertical slice from task planning through specialist evidence, approval, validation, and final owner verification
+- Honest connector/runtime states: unimplemented or unverified capability is shown as Not configured or disconnected
+- Responsive desktop/mobile navigation, accessible focus states, and explicit loading, empty, error, and unavailable states
 - Interactive Three.js factory with five clickable robots
 - Router → Planner → Builder → Tester → Reviewer workflow
 - Animated data packet, mission progress, XP, levels, skills, and themes
@@ -19,6 +23,10 @@ Reconstructed, upgradeable source for the AIOS Robot Guild: a game-style agent w
 - `/mcp` metadata endpoint
 - Guild Memory RAG foundation: approved mission evidence ingestion, owner-scoped retrieval, source citations, trust labels, and deletion API
 - Browser demo mode when the Cloudflare backend is not configured
+
+## Platform policies and roadmap
+
+The versioned platform contract lives in `.aios/`. Start with `mission.md`, `architecture.md`, `completion-gates.md`, and `roadmap.md`. Missing backend capabilities surfaced by the v0.2 application shell are tracked in `.aios/backlog/backend.md`; the UI intentionally does not simulate them.
 
 ## Local development
 

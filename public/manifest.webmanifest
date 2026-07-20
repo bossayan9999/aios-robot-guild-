@@ -1,12 +1,12 @@
 {
-  "name": "AIOS Robot Guild",
-  "short_name": "Robot Guild",
-  "description": "Owner-controlled agentic engineering, OSINT and learning guild.",
+  "name": "CyberScool",
+  "short_name": "CyberScool",
+  "description": "Secure, owner-controlled agentic research and engineering operations.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#06110f",
-  "theme_color": "#071713",
+  "background_color": "#07100f",
+  "theme_color": "#07100f",
   "categories": ["developer", "productivity", "education"],
   "icons": [
     { "src": "/guild-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }

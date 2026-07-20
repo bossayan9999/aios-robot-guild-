@@ -1,4 +1,4 @@
-const CACHE = 'aios-robot-guild-world1'
+const CACHE = 'cyberscool-shell-v0.2'
 const SHELL = ['/', '/manifest.webmanifest', '/guild-icon.svg']
 
 self.addEventListener('install', (event) => {
