@@ -1,6 +1,29 @@
 export type AgentId = 'router' | 'planner' | 'builder' | 'tester' | 'reviewer'
 export type StageState = 'queued' | 'active' | 'passed' | 'failed'
 
+export type TaskState = 'CREATED' | 'PLANNING' | 'WAITING_FOR_APPROVAL' | 'ASSIGNED' | 'SANDBOX_PROVISIONING' | 'RUNNING' | 'TESTING' | 'REVIEWING' | 'REPAIRING' | 'VALIDATING' | 'STAGING' | 'SECURITY_REVIEW' | 'WAITING_FOR_COMPLETION_APPROVAL' | 'COMPLETED' | 'FAILED' | 'BLOCKED' | 'CANCELLED' | 'ROLLED_BACK'
+export type TaskGateType = 'implementation' | 'tests' | 'validation' | 'specialist_review' | 'security_review' | 'evidence_capture' | 'approvals'
+
+export interface Task {
+  id: string
+  user_id: number
+  workspace_id: string
+  title: string
+  description: string
+  state: TaskState
+  current_plan_version: number
+  correlation_id: string
+  created_at: string
+  updated_at: string
+}
+
+export interface TaskPlanVersion { id: number; task_id: string; version: number; content: string; material_change: number; created_by: number; created_at: string }
+export interface TaskStateEvent { id: number; task_id: string; workspace_id: string; from_state?: TaskState; to_state: TaskState; actor_user_id: number; reason: string; plan_version: number; correlation_id: string; idempotency_key: string; created_at: string }
+export interface TaskAssignment { id: number; task_id: string; workspace_id: string; specialist_id: string; plan_version: number; status: string; created_at: string }
+export interface TaskGate { id: number; task_id: string; workspace_id: string; gate_type: TaskGateType; status: 'pending' | 'passed' | 'failed' | 'not_applicable' | 'invalidated'; applicable: number; evidence_id?: string; reason: string; plan_version: number; updated_at: string }
+export interface TaskEvidence { id: string; task_id: string; workspace_id: string; evidence_type: string; title: string; content: string; uri?: string; sha256?: string; plan_version: number; created_at: string }
+export interface TaskDetails { task: Task; plans: TaskPlanVersion[]; steps: unknown[]; dependencies: unknown[]; events: TaskStateEvent[]; assignments: TaskAssignment[]; gates: TaskGate[]; evidence: TaskEvidence[]; specialist_reviews: unknown[]; security_reviews: unknown[]; completion_approvals: unknown[] }
+
 export interface Agent {
   id: AgentId
   name: string
@@ -75,7 +98,7 @@ export interface DeploymentHealth {
   version: string
   build: string
   checks: { worker: string; assets: string; database?: string }
-  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean }
+  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean; task_engine?: boolean }
   checked_at: string
   request_id?: string
 }

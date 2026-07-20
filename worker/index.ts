@@ -1,4 +1,5 @@
 import { cookieValue, hashPassword, randomHex, sha256, verifyPassword } from './security'
+import { handleTaskApi } from './task-engine'
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server'
 import type { AuthenticationResponseJSON, AuthenticatorTransportFuture, RegistrationResponseJSON } from '@simplewebauthn/server'
 
@@ -7,7 +8,7 @@ type AgentId = 'router' | 'planner' | 'builder' | 'tester' | 'reviewer'
 interface Mission { id: string; user_id: number; title: string; repository: string; status: string; plan: string; result?: string; created_at: string; updated_at: string }
 interface EventRecord { id?: number; mission_id: string; agent: AgentId; event_type: string; message: string; progress: number; evidence?: string; created_at?: string }
 interface KnowledgeHit { id: string; document_id: string; title: string; source_type: string; source_uri: string; trust_state: string; content: string; score: number }
-interface AuditContext { action: string; mission_id?: string; decision?: 'approved' | 'rejected' | 'completed' | 'revision_requested' }
+interface AuditContext { action: string; mission_id?: string; task_id?: string; decision?: 'approved' | 'rejected' | 'completed' | 'revision_requested' }
 interface PasskeyRow { id: string; user_id: number; name: string; public_key: ArrayBuffer; counter: number; transports: string; device_type: string; backed_up: number; created_at: string; last_used_at?: string }
 
 const COOKIE = 'aios_session'
@@ -40,6 +41,9 @@ function auditAction(method: string, pathname: string) {
   if (pathname.startsWith('/api/releases')) return method === 'POST' ? 'release.mutate' : 'release.read'
   if (pathname === '/api/copilot/profile') return 'copilot.profile'
   if (pathname === '/api/copilot') return 'copilot.request'
+  if (pathname === '/api/tasks' && method === 'POST') return 'task.create'
+  if (pathname === '/api/tasks') return 'task.list'
+  if (pathname.startsWith('/api/tasks/')) return `task.${pathname.split('/').pop() || 'read'}`
   if (pathname === '/api/knowledge/search') return 'knowledge.search'
   if (/^\/api\/knowledge\//.test(pathname) && method === 'DELETE') return 'knowledge.delete'
   if (pathname === '/api/missions' && method === 'POST') return 'mission.create'
@@ -54,12 +58,14 @@ function auditAction(method: string, pathname: string) {
 function auditPath(pathname: string) {
   return pathname
     .replace(/\/api\/missions\/[a-f0-9]{12}/g, '/api/missions/:id')
+    .replace(/\/api\/tasks\/[a-f0-9]{16}/g, '/api/tasks/:id')
     .replace(/\/api\/knowledge\/[a-zA-Z0-9_-]{3,80}/g, '/api/knowledge/:id')
 }
 
 function writeAudit(request: Request, response: Response, requestId: string, startedAt: number, audit: AuditContext) {
   const url = new URL(request.url)
   const missionId = url.pathname.match(/^\/api\/missions\/([a-f0-9]{12})/)?.[1] || audit.mission_id
+  const taskId = url.pathname.match(/^\/api\/tasks\/([a-f0-9]{16})/)?.[1] || audit.task_id
   const record = {
     event: 'aios.audit',
     timestamp: new Date().toISOString(),
@@ -72,6 +78,7 @@ function writeAudit(request: Request, response: Response, requestId: string, sta
     outcome: response.status < 400 ? 'success' : response.status < 500 ? 'denied_or_invalid' : 'error',
     duration_ms: Math.max(0, Date.now() - startedAt),
     ...(missionId ? { mission_id: missionId } : {}),
+    ...(taskId ? { task_id: taskId } : {}),
     ...(audit.decision ? { decision: audit.decision } : {}),
   }
   if (response.status >= 500) console.error(record)
@@ -238,7 +245,7 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
   if (url.pathname === '/api/health' && method === 'GET') {
     let database = 'pass'
     try { await env.DB.prepare('SELECT 1 AS ready').first() } catch { database = 'fail' }
-    return json({ ok: database === 'pass', service: 'AIOS Robot Guild', version: '1.2.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
+    return json({ ok: database === 'pass', service: 'AIOS Robot Guild', version: '1.3.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true, task_engine: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
   }
   if (url.pathname === '/api/auth/status' && method === 'GET') {
     const id = await userId(request, env); const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()
@@ -284,6 +291,11 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
     return json({ ok: true }, 200, { 'Set-Cookie': secureCookie(request, token) })
   }
   const owner = await requireUser(request, env)
+  if (url.pathname.startsWith('/api/tasks')) {
+    audit.task_id = url.pathname.match(/^\/api\/tasks\/([a-f0-9]{16})/)?.[1]
+    const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
+    return (await handleTaskApi(request, env, owner, correlationId)) || error('Task API route not found', 404)
+  }
   if (url.pathname === '/api/releases/status' && method === 'GET') {
     const githubConnected = Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_INSTALLATION_ID)
     return json({ mode: githubConnected ? 'github_app_ready' : 'proposal_only', github_connected: githubConnected, cloudflare_connected: true, build: BUILD_ID })
@@ -445,7 +457,7 @@ export default {
     const startedAt = Date.now()
     const audit: AuditContext = { action: auditAction(request.method, url.pathname) }
     let response: Response
-    if (url.pathname === '/mcp') response = json({ name: 'AIOS Robot Guild', protocolVersion: '2025-06-18', transport: 'https', build: BUILD_ID, tools: [{ name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }, { name: 'release_center', description: 'Owner-scoped release proposals, approvals and audit evidence; repository mutation requires a GitHub App' }], authentication: 'owner session required for execution' })
+    if (url.pathname === '/mcp') response = json({ name: 'CyberScool', protocolVersion: '2025-06-18', transport: 'https', build: BUILD_ID, tools: [{ name: 'task_engine', description: 'Workspace-scoped, approval-gated task state and completion evidence' }, { name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }, { name: 'release_center', description: 'Owner-scoped release proposals, approvals and audit evidence; repository mutation requires a GitHub App' }], authentication: 'owner session required for execution' })
     else if (url.pathname.startsWith('/api/')) { try { response = await apiHandler(request, env, audit) } catch (problem) { response = problem instanceof Response ? problem : error(problem instanceof Error ? problem.message : 'Unexpected error', 500) } }
     else response = await env.ASSETS.fetch(request)
     const secured = finalize(response, request, requestId)

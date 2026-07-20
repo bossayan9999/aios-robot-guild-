@@ -1,88 +1,110 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { AuthStatus, DeploymentHealth, ForgeProfile, Mission, MissionEvent, ReleaseCenterStatus } from '../types'
+import type { AuthStatus, DeploymentHealth, ForgeProfile, ReleaseCenterStatus, Task, TaskDetails, TaskState } from '../types'
 import { platformApi } from './api'
-import { deriveCompletionGates, integrationConnections, runtimeConnections } from './domain'
+import { taskCompletionGates, integrationConnections, runtimeConnections } from './domain'
+
+const operationKey = (action: string) => `${action}-${crypto.randomUUID()}`
 
 export function usePlatformState() {
   const [auth, setAuth] = useState<AuthStatus | null>(null)
   const [health, setHealth] = useState<DeploymentHealth | null>(null)
   const [releaseStatus, setReleaseStatus] = useState<ReleaseCenterStatus | null>(null)
   const [profile, setProfile] = useState<ForgeProfile | null>(null)
-  const [missions, setMissions] = useState<Mission[]>([])
-  const [activeMission, setActiveMission] = useState<Mission | null>(null)
-  const [events, setEvents] = useState<MissionEvent[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [taskDetails, setTaskDetails] = useState<TaskDetails | null>(null)
   const [mcpVerified, setMcpVerified] = useState(false)
   const [terminalConnected, setTerminalConnected] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const loadMission = useCallback(async (id: string) => {
-    const result = await platformApi.mission(id)
-    setActiveMission(result.mission)
-    setEvents(result.events)
-  }, [])
+  const loadTask = useCallback(async (taskId: string) => setTaskDetails(await platformApi.task(taskId)), [])
+
+  const refreshTasks = useCallback(async () => {
+    const result = await platformApi.tasks()
+    setTasks(result.tasks)
+    if (result.tasks[0]) await loadTask(result.tasks[0].id)
+    else setTaskDetails(null)
+  }, [loadTask])
 
   const refresh = useCallback(async () => {
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
     try {
       const [nextAuth, nextHealth] = await Promise.all([platformApi.authStatus(), platformApi.health()])
-      setAuth(nextAuth)
-      setHealth(nextHealth)
+      setAuth(nextAuth); setHealth(nextHealth)
       platformApi.mcp().then(() => setMcpVerified(true)).catch(() => setMcpVerified(false))
       fetch('http://127.0.0.1:4317/health').then(response => setTerminalConnected(response.ok)).catch(() => setTerminalConnected(false))
       if (nextAuth.authenticated) {
-        const [missionResult, releases, nextProfile] = await Promise.all([platformApi.missions(), platformApi.releaseStatus(), platformApi.copilotProfile()])
-        setMissions(missionResult.missions)
-        setReleaseStatus(releases)
-        setProfile(nextProfile)
-        if (missionResult.missions[0]) await loadMission(missionResult.missions[0].id)
+        const [taskResult, releases, nextProfile] = await Promise.all([platformApi.tasks(), platformApi.releaseStatus(), platformApi.copilotProfile()])
+        setTasks(taskResult.tasks); setReleaseStatus(releases); setProfile(nextProfile)
+        if (taskResult.tasks[0]) await loadTask(taskResult.tasks[0].id)
       }
-    } catch (problem) {
-      setError(problem instanceof Error ? problem.message : 'Unable to load CyberScool')
-    } finally {
-      setLoading(false)
-    }
-  }, [loadMission])
+    } catch (problem) { setError(problem instanceof Error ? problem.message : 'Unable to load CyberScool') }
+    finally { setLoading(false) }
+  }, [loadTask])
 
   useEffect(() => { void refresh() }, [refresh])
 
   async function authenticate(mode: 'setup' | 'login', email: string, password: string) {
     setBusy(true); setError('')
-    try {
-      await platformApi[mode](email, password)
-      await refresh()
-    } catch (problem) { setError(problem instanceof Error ? problem.message : 'Authentication failed') }
+    try { await platformApi[mode](email, password); await refresh() }
+    catch (problem) { setError(problem instanceof Error ? problem.message : 'Authentication failed') }
     finally { setBusy(false) }
   }
 
-  async function mutateMission(action: () => Promise<{ mission: Mission; events?: MissionEvent[] }>) {
+  async function taskAction(action: () => Promise<unknown>) {
+    if (!taskDetails) return
     setBusy(true); setError('')
-    try {
-      const result = await action()
-      setActiveMission(result.mission)
-      if (result.events) setEvents(result.events)
-      else await loadMission(result.mission.id)
-      const list = await platformApi.missions()
-      setMissions(list.missions)
-    } catch (problem) { setError(problem instanceof Error ? problem.message : 'Task action failed') }
+    try { await action(); await refreshTasks() }
+    catch (problem) { setError(problem instanceof Error ? problem.message : 'Task action failed') }
     finally { setBusy(false) }
   }
 
-  const gates = useMemo(() => deriveCompletionGates(activeMission, events), [activeMission, events])
+  async function createTask(title: string, description: string) {
+    setBusy(true); setError('')
+    try { const created = await platformApi.createTask(title, description); setTaskDetails(created); await refreshTasks() }
+    catch (problem) { setError(problem instanceof Error ? problem.message : 'Task creation failed') }
+    finally { setBusy(false) }
+  }
+
+  const activeTask = taskDetails?.task || null
+  const gates = useMemo(() => taskCompletionGates(taskDetails), [taskDetails])
   const integrations = useMemo(() => integrationConnections(health, releaseStatus, mcpVerified), [health, releaseStatus, mcpVerified])
   const runtimes = useMemo(() => runtimeConnections(health, terminalConnected), [health, terminalConnected])
 
   return {
-    auth, health, releaseStatus, profile, missions, activeMission, events, loading, busy, error,
-    gates, integrations, runtimes, refresh, authenticate, loadMission,
-    createMission: (title: string, repository: string) => mutateMission(() => platformApi.createMission(title, repository)),
-    approveMission: (decision: 'approved' | 'rejected') => activeMission && mutateMission(() => platformApi.decideMission(activeMission.id, decision)),
-    runMission: () => activeMission && mutateMission(() => platformApi.runMission(activeMission.id)),
-    verifyMission: (decision: 'completed' | 'revision_requested') => activeMission && mutateMission(() => platformApi.verifyMission(activeMission.id, decision)),
+    auth, health, releaseStatus, profile, tasks, taskDetails, activeTask, events: taskDetails?.events || [], loading, busy, error,
+    gates, integrations, runtimes, refresh, authenticate, loadTask, createTask,
+    savePlan: (content: string) => activeTask && taskAction(() => platformApi.savePlan(activeTask.id, content)),
+    transitionTask: (to: TaskState, reason: string) => activeTask && taskAction(() => platformApi.transitionTask(activeTask.id, to, reason, operationKey(`transition-${to}`))),
+    assignSpecialist: (specialist: string) => activeTask && taskAction(() => platformApi.assignSpecialist(activeTask.id, specialist)),
+    approvePlanAndAssign: () => activeTask && taskAction(async () => {
+      await platformApi.assignSpecialist(activeTask.id, 'tech-development')
+      await platformApi.transitionTask(activeTask.id, 'ASSIGNED', 'Owner approved plan and assigned Tech Development.', operationKey('plan-approval'))
+    }),
+    attachAndPassCoreGates: () => activeTask && taskAction(async () => {
+      const evidence = await platformApi.attachEvidence(activeTask.id, 'validation_report', 'Task validation evidence', `State ${activeTask.state}; plan version ${activeTask.current_plan_version}; owner-reviewed validation evidence.`)
+      for (const gate of ['implementation', 'tests', 'validation', 'evidence_capture'] as const) await platformApi.submitGate(activeTask.id, gate, evidence.id, `${gate.replaceAll('_', ' ')} evidence verified`)
+    }),
+    submitSpecialistReview: () => activeTask && taskAction(() => platformApi.specialistReview(activeTask.id, 'tech-development', 'Implementation and test evidence reviewed.')),
+    submitSecurityReview: () => activeTask && taskAction(() => platformApi.securityReview(activeTask.id, 'Authorization, evidence, secrets, and completion controls reviewed.')),
+    reviewAndValidate: () => activeTask && taskAction(async () => {
+      await platformApi.specialistReview(activeTask.id, 'tech-development', 'Implementation and test evidence reviewed.')
+      await platformApi.transitionTask(activeTask.id, 'VALIDATING', 'Specialist review passed; validation started.', operationKey('validation'))
+    }),
+    validateAndRequestSecurityReview: () => activeTask && taskAction(async () => {
+      const evidence = await platformApi.attachEvidence(activeTask.id, 'validation_report', 'Task validation evidence', `State ${activeTask.state}; plan version ${activeTask.current_plan_version}; validation evidence accepted.`)
+      for (const gate of ['implementation', 'tests', 'validation', 'evidence_capture'] as const) await platformApi.submitGate(activeTask.id, gate, evidence.id, `${gate.replaceAll('_', ' ')} evidence verified`)
+      await platformApi.transitionTask(activeTask.id, 'SECURITY_REVIEW', 'Validation gates passed; security review started.', operationKey('security-review'))
+    }),
+    passSecurityReview: () => activeTask && taskAction(async () => {
+      await platformApi.securityReview(activeTask.id, 'Authorization, evidence, secrets, and completion controls reviewed.')
+      await platformApi.transitionTask(activeTask.id, 'WAITING_FOR_COMPLETION_APPROVAL', 'Security review passed; owner completion approval required.', operationKey('completion-approval-wait'))
+    }),
+    approveCompletion: () => activeTask && taskAction(() => platformApi.approveCompletion(activeTask.id, 'Owner approved the evidenced final result.', operationKey('completion'))),
+    cancelTask: () => activeTask && taskAction(() => platformApi.cancelTask(activeTask.id, 'Owner cancelled the task.', operationKey('cancel'))),
     askCopilot: platformApi.copilot,
-    logout: async () => { await platformApi.logout(); setActiveMission(null); setMissions([]); await refresh() },
+    logout: async () => { await platformApi.logout(); setTaskDetails(null); setTasks([]); await refresh() },
   }
 }
 

@@ -22,16 +22,16 @@ export function SpecialistTeam({ state }: { state: PlatformState }) {
 
 export function ResearchDevelopment({ state }: { state: PlatformState }) {
   return <ScreenTitle eyebrow="EVIDENCE-LED DISCOVERY" title="Research & Development" detail="Move from sourced questions to reviewed decisions without losing provenance.">
-    <div className="cs-rd-flow">{['Sources & citations', 'Hypotheses', 'Experiments', 'Prototypes', 'Findings', 'Decision records'].map((label, index) => <article key={label}><span>{String(index + 1).padStart(2, '0')}</span><h2>{label}</h2><p>{index === 0 && state.events.length ? `${state.events.length} mission evidence records available` : 'Not configured — backend domain API required'}</p></article>)}</div>
+    <div className="cs-rd-flow">{['Sources & citations', 'Hypotheses', 'Experiments', 'Prototypes', 'Findings', 'Decision records'].map((label, index) => <article key={label}><span>{String(index + 1).padStart(2, '0')}</span><h2>{label}</h2><p>{index === 0 && state.taskDetails?.evidence.length ? `${state.taskDetails.evidence.length} task evidence records available` : 'Not configured — backend domain API required'}</p></article>)}</div>
     <Panel title="Research projects" eyebrow="WORKSPACE"><EmptyState title="No research projects" detail="Research project persistence is documented as a backend task. Mission evidence remains available without inventing project records." /></Panel>
   </ScreenTitle>
 }
 
 export function DevelopmentStudio({ state }: { state: PlatformState }) {
-  const repository = state.activeMission?.repository
+  const task = state.activeTask
   return <ScreenTitle eyebrow="ENGINEERING WORKSPACE" title="Development Studio" detail="Repository context, restricted terminal state, and verifiable quality evidence.">
     <div className="cs-grid cs-grid--thirds">
-      <Panel title="Repository browser" eyebrow="SOURCE"><div className="cs-repo"><span>Repository</span>{repository ? <a href={repository} target="_blank" rel="noreferrer">{repository.replace('https://github.com/', '')}</a> : <strong>Not selected</strong>}<small>File-tree API not configured</small></div></Panel>
+      <Panel title="Task workspace" eyebrow="SOURCE"><div className="cs-repo"><span>Backend task</span>{task ? <strong>{task.title}</strong> : <strong>Not selected</strong>}<small>{task ? `${task.workspace_id} · ${task.state}` : 'Repository/file-tree API not configured'}</small></div></Panel>
       <Panel title="Real terminal" eyebrow="LOCAL RESTRICTED AGENT"><div className="cs-state-block"><StatusPill state={state.runtimes[0].state} /><h3>{state.runtimes[0].detail}</h3><p>This is never labeled connected until the loopback companion responds.</p></div></Panel>
       <Panel title="GitHub delivery" eyebrow="BRANCH & PULL REQUEST"><div className="cs-state-block"><StatusPill state={state.releaseStatus?.github_connected ? 'connected' : 'not_configured'} /><h3>{state.releaseStatus?.github_connected ? 'GitHub App verified' : 'Repository automation unavailable'}</h3><p>No branch or pull-request state API is configured.</p></div></Panel>
     </div>
@@ -58,7 +58,7 @@ export function RuntimeCenter({ state }: { state: PlatformState }) {
 
 export function AuditSecurity({ state }: { state: PlatformState }) {
   return <ScreenTitle eyebrow="CONTROL & ACCOUNTABILITY" title="Audit & Security" detail="Approvals, policy decisions, blocked work and emergency controls.">
-    <div className="cs-grid cs-grid--main"><Panel title="Task audit trail" eyebrow="AVAILABLE EVIDENCE">{state.events.length ? <div className="cs-audit-list">{state.events.map((event, index) => <div key={event.id || index}><time>{event.created_at ? new Date(event.created_at).toLocaleString() : 'Current task'}</time><div><strong>{event.event_type.replaceAll('_', ' ')}</strong><p>{event.message}</p></div></div>)}</div> : <EmptyState title="No task audit events" detail="Select or create a mission to see its durable evidence trail." />}</Panel><Panel title="Policy decisions" eyebrow="COMPLETION ENFORCEMENT"><div className="cs-gates">{state.gates.map(gate => <div className="cs-gate" key={gate.id}><div><strong>{gate.label}</strong><small>{gate.evidence}</small></div><StatusPill state={gate.state} /></div>)}</div></Panel></div>
+    <div className="cs-grid cs-grid--main"><Panel title="Task audit trail" eyebrow="AVAILABLE EVIDENCE">{state.events.length ? <div className="cs-audit-list">{state.events.map(event => <div key={event.id}><time>{new Date(event.created_at).toLocaleString()}</time><div><strong>{event.from_state ? `${event.from_state} → ${event.to_state}` : event.to_state}</strong><p>{event.reason}</p></div></div>)}</div> : <EmptyState title="No task audit events" detail="Select or create a task to see its durable state history." />}</Panel><Panel title="Policy decisions" eyebrow="COMPLETION ENFORCEMENT"><div className="cs-gates">{state.gates.map(gate => <div className="cs-gate" key={gate.id}><div><strong>{gate.label}</strong><small>{gate.evidence}</small></div><StatusPill state={gate.state} /></div>)}</div></Panel></div>
     <div className="cs-grid cs-grid--thirds"><Panel title="Blocked operations" eyebrow="BACKEND TASK"><EmptyState title="No blocked-operation API" detail="A structured policy-decision endpoint is required." /></Panel><Panel title="Device revocation" eyebrow="BACKEND TASK"><EmptyState title="Not configured" detail="No enrolled runtime or mobile device registry exists." /></Panel><Panel title="Emergency stop" eyebrow="SAFETY CONTROL"><div className="cs-danger"><strong>Unavailable</strong><p>No global execution lease or cancellation API exists yet. This control is intentionally disabled.</p><button disabled>Emergency stop</button></div></Panel></div>
   </ScreenTitle>
 }

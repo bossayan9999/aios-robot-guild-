@@ -15,6 +15,7 @@ await check('/api/health', [200], (body) => {
 })
 await check('/api/auth/status', [200], (body) => { if (typeof JSON.parse(body).authenticated !== 'boolean') throw new Error('Auth status malformed') })
 await check('/api/missions', [401])
+await check('/api/tasks', [401])
 await check('/api/copilot/profile', [401])
 await check('/mcp', [200], (body) => { if (!JSON.parse(body).tools?.length) throw new Error('MCP metadata has no tools') })
 await check('/manifest.webmanifest', [200], (body) => { if (JSON.parse(body).display !== 'standalone') throw new Error('PWA manifest malformed') })

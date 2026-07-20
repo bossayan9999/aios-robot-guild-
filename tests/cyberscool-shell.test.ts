@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { platformNavigation, routeFromHash } from '../src/platform/navigation'
-import { connectionLabel, deriveCompletionGates, integrationConnections } from '../src/platform/domain'
-import type { DeploymentHealth, Mission, MissionEvent, ReleaseCenterStatus } from '../src/types'
+import { connectionLabel, integrationConnections, taskCompletionGates } from '../src/platform/domain'
+import type { DeploymentHealth, ReleaseCenterStatus, TaskDetails, TaskGateType, TaskState } from '../src/types'
 
-const mission = (status: string): Mission => ({ id: 'abc123def456', title: 'Verify platform', repository: 'https://github.com/example/project', status, plan: '1. Validate' })
-const evidence: MissionEvent[] = [
-  { agent: 'builder', event_type: 'root_inventory', message: 'Implementation evidence', progress: 60, evidence: 'files' },
-  { agent: 'tester', event_type: 'readiness_check', message: 'Checks passed', progress: 80, evidence: 'tests' },
-  { agent: 'reviewer', event_type: 'human_gate', message: 'Review complete', progress: 100 },
-]
+const details = (state: TaskState, passed = false): TaskDetails => ({
+  task: { id: 'abc123def4567890', user_id: 1, workspace_id: 'owner-1', title: 'Verify platform', description: 'Test task', state, current_plan_version: 1, correlation_id: 'corr', created_at: '2026-07-21', updated_at: '2026-07-21' },
+  plans: [], steps: [], dependencies: [], events: [], assignments: [], evidence: [], specialist_reviews: [], security_reviews: [], completion_approvals: [],
+  gates: (['implementation', 'tests', 'validation', 'specialist_review', 'security_review', 'evidence_capture', 'approvals'] as TaskGateType[]).map((gate_type, index) => ({ id: index, task_id: 'abc123def4567890', workspace_id: 'owner-1', gate_type, status: passed ? 'passed' : 'pending', applicable: 1, reason: '', plan_version: 1, updated_at: '2026-07-21' })),
+})
 
 describe('CyberScool application shell', () => {
   it('provides typed navigation for every primary area, Guild View, and Settings', () => {
@@ -18,20 +17,20 @@ describe('CyberScool application shell', () => {
   })
 
   it('keeps every completion gate locked before final verification', () => {
-    const gates = deriveCompletionGates(mission('awaiting_approval'), [])
+    const gates = taskCompletionGates(details('WAITING_FOR_APPROVAL'))
     expect(gates).toHaveLength(7)
     expect(gates.some(gate => gate.state === 'passed')).toBe(false)
-    expect(gates.find(gate => gate.id === 'approval')?.state).toBe('active')
+    expect(gates.find(gate => gate.id === 'approvals')?.state).toBe('pending')
   })
 
   it('passes every completion gate only for a verified completed mission', () => {
-    const gates = deriveCompletionGates(mission('completed'), evidence)
+    const gates = taskCompletionGates(details('COMPLETED', true))
     expect(gates.every(gate => gate.state === 'passed')).toBe(true)
-    expect(gates.map(gate => gate.id)).toEqual(['implementation', 'tests', 'validation', 'specialist_review', 'security_review', 'evidence', 'approval'])
+    expect(gates.map(gate => gate.id)).toEqual(['implementation', 'tests', 'validation', 'specialist_review', 'security_review', 'evidence_capture', 'approvals'])
   })
 
   it('fails evidence-dependent gates when a completed record lacks evidence', () => {
-    expect(deriveCompletionGates(mission('completed'), []).some(gate => gate.state === 'failed')).toBe(true)
+    expect(taskCompletionGates(details('COMPLETED')).some(gate => gate.state === 'failed')).toBe(true)
   })
 
   it('shows connected integrations only from verified backend state', () => {

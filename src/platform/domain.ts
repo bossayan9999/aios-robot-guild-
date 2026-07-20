@@ -1,4 +1,4 @@
-import type { DeploymentHealth, Mission, MissionEvent, ReleaseCenterStatus } from '../types'
+import type { DeploymentHealth, ReleaseCenterStatus, TaskDetails, TaskGateType } from '../types'
 
 export type ConnectionState = 'connected' | 'disconnected' | 'not_configured' | 'checking' | 'error'
 
@@ -12,7 +12,7 @@ export interface ConnectionRecord {
 }
 
 export interface CompletionGate {
-  id: 'implementation' | 'tests' | 'validation' | 'specialist_review' | 'security_review' | 'evidence' | 'approval'
+  id: TaskGateType
   label: string
   state: 'passed' | 'active' | 'pending' | 'failed'
   evidence: string
@@ -24,44 +24,21 @@ const labels: Record<CompletionGate['id'], string> = {
   validation: 'Validation',
   specialist_review: 'Specialist review',
   security_review: 'Security review',
-  evidence: 'Evidence capture',
-  approval: 'Required approvals',
+  evidence_capture: 'Evidence capture',
+  approvals: 'Required approvals',
 }
 
-export function deriveCompletionGates(mission: Mission | null, events: MissionEvent[]): CompletionGate[] {
-  const status = mission?.status || 'draft'
-  const completed = status === 'completed'
-  const reviewReady = ['review_required', 'completed'].includes(status)
-  const approved = ['approved', 'running', 'review_required', 'completed'].includes(status)
-  const hasEvidence = events.some(event => Boolean(event.evidence) || ['quality', 'review', 'complete'].some(term => event.event_type.includes(term)))
-  const hasImplementation = events.some(event => event.agent === 'builder')
-  const hasTest = events.some(event => event.agent === 'tester')
-  const hasReview = events.some(event => event.agent === 'reviewer')
-  const failed = status === 'failed'
-  const values: Record<CompletionGate['id'], CompletionGate['state']> = {
-    implementation: failed || (completed && !hasImplementation) ? 'failed' : hasImplementation ? 'passed' : status === 'running' ? 'active' : 'pending',
-    tests: failed || (completed && !hasTest) ? 'failed' : hasTest ? 'passed' : status === 'running' ? 'active' : 'pending',
-    validation: failed || (completed && !hasTest) ? 'failed' : hasTest ? 'passed' : status === 'running' ? 'active' : 'pending',
-    specialist_review: completed && !hasReview ? 'failed' : completed && hasReview ? 'passed' : reviewReady ? 'active' : 'pending',
-    security_review: completed && !hasReview ? 'failed' : completed && hasReview ? 'passed' : reviewReady ? 'active' : 'pending',
-    evidence: completed && !hasEvidence ? 'failed' : hasEvidence ? 'passed' : reviewReady ? 'active' : 'pending',
-    approval: completed ? 'passed' : status === 'awaiting_approval' || reviewReady ? 'active' : approved ? 'passed' : 'pending',
-  }
-  return (Object.keys(labels) as CompletionGate['id'][]).map(id => ({
-    id,
-    label: labels[id],
-    state: values[id],
-    evidence: gateEvidence(id, mission, events),
-  }))
-}
-
-function gateEvidence(id: CompletionGate['id'], mission: Mission | null, events: MissionEvent[]) {
-  if (!mission) return 'No active task'
-  if (id === 'evidence') return events.length ? `${events.length} recorded task event${events.length === 1 ? '' : 's'}` : 'No evidence recorded'
-  if (id === 'approval') return mission.status === 'completed' ? 'Owner completion approval recorded' : mission.status === 'awaiting_approval' ? 'Owner decision required' : 'Initial approval state recorded'
-  if (id === 'specialist_review') return events.some(event => event.agent === 'reviewer') ? 'Reviewer handoff recorded' : 'Reviewer handoff pending'
-  if (id === 'security_review') return events.some(event => event.agent === 'reviewer') ? 'Read-only scope review recorded' : 'Security review required before completion'
-  return mission.status === 'completed' ? 'Verified task result' : `Task state: ${mission.status.replaceAll('_', ' ')}`
+export function taskCompletionGates(details: TaskDetails | null): CompletionGate[] {
+  return (Object.keys(labels) as TaskGateType[]).map(id => {
+    const gate = details?.gates.find(item => item.gate_type === id)
+    const state: CompletionGate['state'] = gate?.status === 'passed' || gate?.status === 'not_applicable' ? 'passed' : gate?.status === 'failed' || gate?.status === 'invalidated' || details?.task.state === 'COMPLETED' ? 'failed' : details?.task.state === 'WAITING_FOR_COMPLETION_APPROVAL' ? 'active' : 'pending'
+    return {
+      id,
+      label: labels[id],
+      state,
+      evidence: gate ? `${gate.status.replaceAll('_', ' ')} · plan v${gate.plan_version}${gate.reason ? ` · ${gate.reason}` : ''}` : 'Awaiting backend gate record',
+    }
+  })
 }
 
 export function integrationConnections(
