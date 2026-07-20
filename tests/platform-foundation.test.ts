@@ -58,9 +58,9 @@ describe('CyberScool platform foundation', () => {
 
   it('keeps completed release metadata linked to durable gate evidence', () => {
     const release = JSON.parse(readFileSync(new URL('../.aios/releases/current-release.json', import.meta.url), 'utf8')) as { status: string; completion_evidence: string }
-    const evidence = JSON.parse(readFileSync(new URL('../.aios/releases/evidence/v0.2-completion.json', import.meta.url), 'utf8')) as { gates: Record<string, { status: string }>; residual_risks: string[] }
+    const evidence = JSON.parse(readFileSync(new URL(`../${release.completion_evidence}`, import.meta.url), 'utf8')) as { gates: Record<string, { status: string }>; residual_risks: string[] }
     expect(release.status).toBe('completed')
-    expect(release.completion_evidence).toBe('.aios/releases/evidence/v0.2-completion.json')
+    expect(release.completion_evidence).toMatch(/^\.aios\/releases\/evidence\/v\d+\.\d+-completion\.json$/)
     expect(Object.keys(evidence.gates)).toEqual(['implementation', 'tests', 'validation', 'specialist_review', 'security_review', 'evidence_capture', 'required_approval'])
     expect(Object.values(evidence.gates).every(gate => gate.status === 'passed')).toBe(true)
     expect(evidence.residual_risks.length).toBeGreaterThan(0)

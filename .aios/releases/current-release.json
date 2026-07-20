@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "release": "v0.2",
-  "name": "CyberScool application shell",
+  "release": "v0.5",
+  "name": "CyberScool specialist runtime",
   "status": "completed",
   "branch": "feature/cyberscool-platform-foundation",
-  "commit": "f3883dc",
-  "completed_at": "2026-07-20",
-  "completion_evidence": ".aios/releases/evidence/v0.2-completion.json",
+  "commit": "feat: add CyberScool specialist runtime",
+  "completed_at": "2026-07-21",
+  "completion_evidence": ".aios/releases/evidence/v0.5-completion.json",
   "evidence_captured_at": "2026-07-21",
-  "next_release": "v0.3",
-  "next_objective": "Core task engine and enforceable completion gates"
+  "next_release": "v0.6",
+  "next_objective": "Connector and skill registry"
 }

@@ -1,4 +1,4 @@
-import type { AuthStatus, DeploymentHealth, ForgeProfile, OrchestrationDetails, OrchestrationPlan, ReleaseCenterStatus, SpecialistManifest, Task, TaskDetails, TaskGateType, TaskState } from '../types'
+import type { AuthStatus, DeploymentHealth, ForgeProfile, OrchestrationDetails, OrchestrationPlan, ReleaseCenterStatus, SpecialistManifest, SpecialistRuntimeRegistry, Task, TaskDetails, TaskGateType, TaskState } from '../types'
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly requestId?: string) {
@@ -50,4 +50,5 @@ export const platformApi = {
   finalReport: (taskId: string) => request<{ eligible: boolean; parent_task_state: TaskState; plan_version: number; reasons: string[]; summary: string }>(`/api/orchestration/tasks/${taskId}/final-report`),
   createCustomSpecialist: (input: Record<string, unknown>) => request<{ id: string; version: number; enabled: false }>('/api/orchestration/specialists/custom', { method: 'POST', body: JSON.stringify(input) }),
   currentOrchestrationPlan: (taskId: string) => request<{ plan: OrchestrationPlan | null }>(`/api/orchestration/tasks/${taskId}/plan`),
+  specialistRuntimeRegistry: () => request<SpecialistRuntimeRegistry>('/api/specialist-runtime/registry'),
 }

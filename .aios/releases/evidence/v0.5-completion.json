@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "release": "v0.5",
+  "name": "CyberScool specialist runtime",
+  "branch": "feature/cyberscool-platform-foundation",
+  "implementation_commit": "feat: add CyberScool specialist runtime",
+  "environment": { "runtime": "Windows local development", "full_stack_url": "http://127.0.0.1:8793", "deployment_scope": "local verification only" },
+  "gates": {
+    "implementation": { "status": "passed", "evidence": "Migration 0007, specialist runtime Worker service, typed frontend state, and Specialist Team rendering." },
+    "tests": { "status": "passed", "commands": ["npm run lint", "npm test", "npm run build", "npm run smoke", "node tests/specialist-runtime-smoke.mjs"] },
+    "validation": { "status": "passed", "evidence": "Fresh local D1 migration and authenticated Wrangler lifecycle." },
+    "specialist_review": { "status": "passed", "result": "Scope, contracts, evaluation separation, revocation, and honest UI state reviewed." },
+    "security_review": { "status": "passed", "result": "Deny-by-default grants, workspace isolation, self-review rejection, expiry, approval, and cascading revocation verified." },
+    "evidence_capture": { "status": "passed", "artifacts": ["tests/specialist-runtime.test.ts", "tests/specialist-runtime-smoke.mjs", "migrations/0007_specialist_runtime.sql"] },
+    "required_approval": { "status": "passed", "scope": "Feature-branch implementation only; no merge or deployment." }
+  },
+  "residual_risks": ["Runtime identities and dispatch are deferred to Phase 7.", "Current organization scope remains owner-derived pending production RBAC.", "Evaluation evidence references are durable metadata; artifact storage is not yet implemented."]
+}

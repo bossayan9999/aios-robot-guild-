@@ -115,6 +115,9 @@ Exit: production readiness is supported by independent evidence rather than feat
 
 - **v0.1 — Foundation:** mission, architecture, security, sandbox, specialists, connectors, and completion policies.
 - **v0.2 — Application shell:** professional CyberScool navigation, honest connection states, Guild View, and the first backend-compatible task slice.
+- **v0.3 — Task engine:** server-authoritative D1 tasks and enforceable completion gates (`cc651c0`).
+- **v0.4 — Copilot orchestration:** versioned plans, bounded assignments, handoffs, reviews, conflicts, and final-report eligibility (`6f7f95d`).
+- **v0.5 — Specialist runtime:** typed definitions, scoped expiring grants, independent evaluation, execution contracts, performance evidence, suspension, and revocation.
 - **v0.3 — Task engine:** canonical task state machine and enforceable completion gates.
 - **v0.4 — Copilot Manager:** specialist registry, assignment, handoffs, and review orchestration.
 - **v0.5 — Connectors:** verified GitHub and Cloudflare integrations.

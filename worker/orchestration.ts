@@ -18,18 +18,19 @@ export function dependenciesValid(steps: { id: string; depends_on?: string[] }[]
   return steps.every(step => visit(step.id))
 }
 
-const BUILT_INS = [
-  ['copilot-manager', 'Copilot Manager', 'Coordinates scoped plans, approvals, assignments, evidence, and escalation.', 'medium'],
-  ['tech-development', 'Tech Development', 'Implements and reviews software with tests and compatibility evidence.', 'medium'],
-  ['business', 'Business', 'Analyzes requirements, operations, value, and evidence-backed priorities.', 'low'],
-  ['finance-advisory', 'Finance Advisory', 'Provides sourced scenario analysis without executing transactions.', 'high'],
-  ['ccna-network-security', 'CCNA Network and Security', 'Designs and validates networks; live changes require explicit approval.', 'high'],
-  ['cybersecurity', 'Cybersecurity', 'Performs defensive security review within explicit authorization.', 'high'],
-  ['devops', 'DevOps', 'Builds delivery and reliability controls; production writes require approval.', 'high'],
-  ['research-osint', 'Research and OSINT', 'Produces lawful, attributable research with provenance and confidence.', 'medium'],
-  ['ui-ux', 'UI and UX', 'Designs accessible, responsive, truthful product experiences.', 'low'],
-  ['custom-specialist-builder', 'Custom Specialist Builder', 'Defines sandbox-evaluated, reviewed, owner-approved specialist manifests.', 'high'],
-] as const
+interface BuiltInSpecialist { id: string; name: string; instructions: string; risk: 'low' | 'medium' | 'high'; skills: string[]; tools: string[]; connectors: string[]; runtimes: string[] }
+export const BUILT_INS: BuiltInSpecialist[] = [
+  { id: 'copilot-manager', name: 'Copilot Manager', instructions: 'Coordinate scoped plans, approvals, assignments, evidence, and escalation without executing or completing work.', risk: 'medium', skills: ['planning', 'risk-classification', 'orchestration'], tools: ['task-read', 'plan-write'], connectors: [], runtimes: ['cloud-worker'] },
+  { id: 'tech-development', name: 'Tech Development', instructions: 'Implement and review software with tests, compatibility notes, rollback, and evidence.', risk: 'medium', skills: ['software-engineering', 'testing'], tools: ['repository-read', 'repository-write', 'build', 'test'], connectors: ['github'], runtimes: ['docker-sandbox'] },
+  { id: 'business', name: 'Business', instructions: 'Analyze requirements, operations, value, and evidence-backed priorities without commitments.', risk: 'low', skills: ['requirements', 'business-analysis'], tools: ['document-read'], connectors: [], runtimes: ['cloud-worker'] },
+  { id: 'finance-advisory', name: 'Finance Advisory', instructions: 'Provide sourced scenario analysis without transactions or regulated personalized advice.', risk: 'high', skills: ['financial-analysis'], tools: ['document-read', 'calculation'], connectors: [], runtimes: ['cloud-worker'] },
+  { id: 'ccna-network-security', name: 'CCNA Network and Security', instructions: 'Design and validate networks in simulation; live targets require authorization and rollback.', risk: 'high', skills: ['network-design', 'network-validation'], tools: ['network-simulation'], connectors: [], runtimes: ['docker-sandbox'] },
+  { id: 'cybersecurity', name: 'Cybersecurity', instructions: 'Perform defensive security review within explicit authorization and evidence handling rules.', risk: 'high', skills: ['threat-modeling', 'security-review'], tools: ['repository-read', 'security-scan'], connectors: [], runtimes: ['docker-sandbox'] },
+  { id: 'devops', name: 'DevOps', instructions: 'Build delivery and reliability controls; production writes require environment approval.', risk: 'high', skills: ['ci-cd', 'reliability'], tools: ['repository-read', 'build'], connectors: ['github', 'cloudflare'], runtimes: ['docker-sandbox'] },
+  { id: 'research-osint', name: 'Research and OSINT', instructions: 'Produce lawful, attributable research with provenance, contradictions, and confidence.', risk: 'medium', skills: ['research', 'source-evaluation'], tools: ['document-read'], connectors: [], runtimes: ['cloud-worker'] },
+  { id: 'ui-ux', name: 'UI and UX', instructions: 'Design accessible, responsive, truthful product experiences and validate user states.', risk: 'low', skills: ['accessibility', 'interaction-design'], tools: ['repository-read'], connectors: [], runtimes: ['docker-sandbox'] },
+  { id: 'custom-specialist-builder', name: 'Custom Specialist Builder', instructions: 'Define sandbox-evaluated, independently reviewed, owner-approved specialist manifests.', risk: 'high', skills: ['manifest-authoring', 'evaluation-design'], tools: ['manifest-write'], connectors: [], runtimes: ['docker-sandbox'] },
+]
 const SCHEMA = JSON.stringify({ type: 'object', additionalProperties: false })
 const json = (payload: unknown, status = 200) => Response.json(payload, { status, headers: { 'Cache-Control': 'no-store' } })
 const fail = (message: string, status = 400) => json({ error: message }, status)
@@ -48,12 +49,16 @@ const list = (value: unknown, label: string, max = 30) => {
 }
 const organization = (userId: number) => `owner-${userId}`
 
-async function seedBuiltIns(env: Env, userId: number, workspace: string, correlation: string) {
+export async function seedBuiltIns(env: Env, userId: number, workspace: string, correlation: string) {
   const org = organization(userId)
-  await env.DB.batch(BUILT_INS.map(([id, name, instructions, risk]) => env.DB.prepare(`INSERT OR IGNORE INTO specialist_manifests
+  await env.DB.batch(BUILT_INS.map(item => env.DB.prepare(`INSERT OR IGNORE INTO specialist_manifests
     (id,version,organization_id,workspace_id,name,role,instructions,input_schema,output_schema,allowed_tools,allowed_connectors,allowed_runtimes,allowed_data_scope,risk_level,budget_limits,approval_requirements,prohibited_actions,reviewer_requirements,enabled,sandbox_evaluated,security_reviewed,owner_approved,created_by,status,evidence_refs,correlation_id)
-    VALUES(?,1,?,?,?,?,?,?,?,'[]','[]','["docker-sandbox"]','["task"]',?,'{"max_retries":2,"max_steps":20}','["owner_for_high_risk","independent_review"]','["self_grant","scope_expansion","approval_bypass","parent_completion"]','["independent_specialist","security_for_sensitive"]',1,1,1,1,?,'ACTIVE','[]',?)`)
-    .bind(id, org, workspace, name, name, instructions, SCHEMA, SCHEMA, risk, userId, correlation)))
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(item.id, 1, org, workspace, item.name, item.name, item.instructions, SCHEMA, SCHEMA, JSON.stringify(item.tools), JSON.stringify(item.connectors), JSON.stringify(item.runtimes), '["task"]', item.risk, '{"max_retries":2,"max_steps":20,"max_runtime_minutes":60}', '["owner_for_high_risk","independent_review"]', '["self_grant","scope_expansion","approval_bypass","parent_completion"]', '["independent_specialist","security_for_sensitive"]', 1, 1, 1, 1, userId, 'ACTIVE', '[]', correlation)))
+  await env.DB.batch(BUILT_INS.flatMap(item => [
+    env.DB.prepare('UPDATE specialist_manifests SET allowed_skills=?,evaluation_suite=?,integrity_digest=COALESCE(integrity_digest,?) WHERE id=? AND version=1 AND organization_id=? AND workspace_id=?').bind(JSON.stringify(item.skills), JSON.stringify([{ id: 'scope-control', expected: 'reject_scope_expansion' }, { id: 'evidence', expected: 'require_evidence' }]), `builtin-v1-${item.id}`, item.id, org, workspace),
+    ...item.skills.map(skill => env.DB.prepare("INSERT OR IGNORE INTO specialist_skills(specialist_id,specialist_version,organization_id,workspace_id,skill_id,skill_version,instructions,status,actor_user_id,evidence_refs,correlation_id) VALUES(?,1,?,?,?,1,?,'ACTIVE',?,'[]',?)").bind(item.id, org, workspace, skill, `Apply ${skill} only within the assignment contract.`, userId, correlation)),
+  ]))
 }
 
 async function task(env: Env, taskId: string, userId: number, workspace: string) {
@@ -97,11 +102,12 @@ export async function handleOrchestrationApi(request: Request, env: Env, userId:
   if (url.pathname === '/api/orchestration/specialists/custom' && method === 'POST') {
     const input = await parse<Record<string, unknown>>(request), id = `custom-${uid()}`
     const name = text(input.name, 'Name', 3, 80), role = text(input.role, 'Role', 3, 160), instructions = text(input.instructions, 'Instructions', 10, 10000)
-    const requestedTools = list(input.requested_tools || [], 'Requested tools'), connectors = list(input.requested_connectors || [], 'Requested connectors'), runtimes = list(input.requested_runtimes || [], 'Requested runtimes')
+    const requestedSkills = list(input.requested_skills || [], 'Requested skills'), requestedTools = list(input.requested_tools || [], 'Requested tools'), connectors = list(input.requested_connectors || [], 'Requested connectors'), runtimes = list(input.requested_runtimes || [], 'Requested runtimes')
     const testCases = Array.isArray(input.test_cases) ? input.test_cases.slice(0, 20) : []
     await env.DB.prepare(`INSERT INTO specialist_manifests(id,version,organization_id,workspace_id,name,role,instructions,input_schema,output_schema,allowed_tools,allowed_connectors,allowed_runtimes,allowed_data_scope,risk_level,budget_limits,approval_requirements,prohibited_actions,reviewer_requirements,test_cases,enabled,sandbox_evaluated,security_reviewed,owner_approved,created_by,status,evidence_refs,correlation_id)
       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(id, 1, org, workspace, name, role, instructions, JSON.stringify(input.input_schema || {}), JSON.stringify(input.output_schema || {}), JSON.stringify(requestedTools), JSON.stringify(connectors), JSON.stringify(runtimes), JSON.stringify(['task']), text(input.risk_level || 'high', 'Risk level', 3, 20), '{"max_retries":1}', '["sandbox_evaluation","security_review","owner_approval"]', '["self_grant","scope_expansion","approval_bypass","parent_completion"]', '["independent_security_reviewer"]', JSON.stringify(testCases), 0, 0, 0, 0, userId, 'DRAFT', '[]', correlation).run()
+    await env.DB.prepare('UPDATE specialist_manifests SET allowed_skills=?,evaluation_suite=? WHERE id=? AND version=1 AND organization_id=? AND workspace_id=?').bind(JSON.stringify(requestedSkills), JSON.stringify(testCases), id, org, workspace).run()
     return json({ id, version: 1, enabled: false, status: 'DRAFT' }, 201)
   }
   const lifecycleMatch = url.pathname.match(/^\/api\/orchestration\/specialists\/(custom-[a-f0-9]{16})\/lifecycle$/)
@@ -114,6 +120,8 @@ export async function handleOrchestrationApi(request: Request, env: Env, userId:
     if (input.action === 'sandbox_passed') await env.DB.prepare("UPDATE specialist_manifests SET sandbox_evaluated=1,status='EVALUATED',evidence_refs=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=? AND workspace_id=?").bind(JSON.stringify(evidence), manifest.id, manifest.version, workspace).run()
     else if (input.action === 'security_passed') {
       if (!manifest.sandbox_evaluated) return fail('Sandbox evaluation must pass before security review', 409)
+      const independentEvaluation = await env.DB.prepare("SELECT id FROM specialist_evaluations WHERE specialist_id=? AND specialist_version=? AND workspace_id=? AND passed=1 AND evaluator_specialist_id<>specialist_id ORDER BY created_at DESC LIMIT 1").bind(manifest.id, manifest.version, workspace).first()
+      if (!independentEvaluation) return fail('Independent specialist evaluation must pass before security review', 409)
       await env.DB.prepare("UPDATE specialist_manifests SET security_reviewed=1,status='SECURITY_REVIEWED',evidence_refs=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND version=? AND workspace_id=?").bind(JSON.stringify(evidence), manifest.id, manifest.version, workspace).run()
     } else if (input.action === 'owner_approved') {
       if (!manifest.sandbox_evaluated || !manifest.security_reviewed) return fail('Sandbox evaluation and security review are required before owner approval', 409)

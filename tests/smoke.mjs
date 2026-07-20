@@ -17,6 +17,7 @@ await check('/api/auth/status', [200], (body) => { if (typeof JSON.parse(body).a
 await check('/api/missions', [401])
 await check('/api/tasks', [401])
 await check('/api/orchestration/specialists', [401])
+await check('/api/specialist-runtime/registry', [401])
 await check('/api/copilot/profile', [401])
 await check('/mcp', [200], (body) => { if (!JSON.parse(body).tools?.length) throw new Error('MCP metadata has no tools') })
 await check('/manifest.webmanifest', [200], (body) => { if (JSON.parse(body).display !== 'standalone') throw new Error('PWA manifest malformed') })

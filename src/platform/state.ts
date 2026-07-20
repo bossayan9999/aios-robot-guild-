@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { AuthStatus, DeploymentHealth, ForgeProfile, OrchestrationDetails, ReleaseCenterStatus, SpecialistManifest, Task, TaskDetails, TaskState } from '../types'
+import type { AuthStatus, DeploymentHealth, ForgeProfile, OrchestrationDetails, ReleaseCenterStatus, SpecialistManifest, SpecialistRuntimeRegistry, Task, TaskDetails, TaskState } from '../types'
 import { platformApi } from './api'
 import { taskCompletionGates, integrationConnections, runtimeConnections } from './domain'
 
@@ -14,6 +14,7 @@ export function usePlatformState() {
   const [taskDetails, setTaskDetails] = useState<TaskDetails | null>(null)
   const [orchestration, setOrchestration] = useState<OrchestrationDetails | null>(null)
   const [specialists, setSpecialists] = useState<SpecialistManifest[]>([])
+  const [specialistRuntime, setSpecialistRuntime] = useState<SpecialistRuntimeRegistry | null>(null)
   const [finalReport, setFinalReport] = useState<{ eligible: boolean; reasons: string[]; summary: string } | null>(null)
   const [mcpVerified, setMcpVerified] = useState(false)
   const [terminalConnected, setTerminalConnected] = useState(false)
@@ -42,8 +43,8 @@ export function usePlatformState() {
       platformApi.mcp().then(() => setMcpVerified(true)).catch(() => setMcpVerified(false))
       fetch('http://127.0.0.1:4317/health').then(response => setTerminalConnected(response.ok)).catch(() => setTerminalConnected(false))
       if (nextAuth.authenticated) {
-        const [taskResult, releases, nextProfile, registry] = await Promise.all([platformApi.tasks(), platformApi.releaseStatus(), platformApi.copilotProfile(), platformApi.specialists()])
-        setTasks(taskResult.tasks); setReleaseStatus(releases); setProfile(nextProfile); setSpecialists(registry.specialists)
+        const [taskResult, releases, nextProfile, registry, runtimeRegistry] = await Promise.all([platformApi.tasks(), platformApi.releaseStatus(), platformApi.copilotProfile(), platformApi.specialists(), platformApi.specialistRuntimeRegistry()])
+        setTasks(taskResult.tasks); setReleaseStatus(releases); setProfile(nextProfile); setSpecialists(registry.specialists); setSpecialistRuntime(runtimeRegistry)
         if (taskResult.tasks[0]) await loadTask(taskResult.tasks[0].id)
       }
     } catch (problem) { setError(problem instanceof Error ? problem.message : 'Unable to load CyberScool') }
@@ -80,7 +81,7 @@ export function usePlatformState() {
   const runtimes = useMemo(() => runtimeConnections(health, terminalConnected), [health, terminalConnected])
 
   return {
-    auth, health, releaseStatus, profile, tasks, taskDetails, orchestration, specialists, finalReport, activeTask, events: taskDetails?.events || [], loading, busy, error,
+    auth, health, releaseStatus, profile, tasks, taskDetails, orchestration, specialists, specialistRuntime, finalReport, activeTask, events: taskDetails?.events || [], loading, busy, error,
     gates, integrations, runtimes, refresh, authenticate, loadTask, createTask,
     savePlan: (content: string) => activeTask && taskAction(() => platformApi.savePlan(activeTask.id, content)),
     transitionTask: (to: TaskState, reason: string) => activeTask && taskAction(() => platformApi.transitionTask(activeTask.id, to, reason, operationKey(`transition-${to}`))),

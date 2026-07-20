@@ -1,6 +1,7 @@
 import { cookieValue, hashPassword, randomHex, sha256, verifyPassword } from './security'
 import { handleTaskApi } from './task-engine'
 import { handleOrchestrationApi } from './orchestration'
+import { handleSpecialistRuntimeApi } from './specialist-runtime'
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server'
 import type { AuthenticationResponseJSON, AuthenticatorTransportFuture, RegistrationResponseJSON } from '@simplewebauthn/server'
 
@@ -46,6 +47,7 @@ function auditAction(method: string, pathname: string) {
   if (pathname === '/api/tasks') return 'task.list'
   if (pathname.startsWith('/api/tasks/')) return `task.${pathname.split('/').pop() || 'read'}`
   if (pathname.startsWith('/api/orchestration/')) return `orchestration.${pathname.split('/').pop() || 'read'}`
+  if (pathname.startsWith('/api/specialist-runtime/')) return `specialist_runtime.${pathname.split('/').pop() || 'read'}`
   if (pathname === '/api/knowledge/search') return 'knowledge.search'
   if (/^\/api\/knowledge\//.test(pathname) && method === 'DELETE') return 'knowledge.delete'
   if (pathname === '/api/missions' && method === 'POST') return 'mission.create'
@@ -303,6 +305,10 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
     audit.task_id = url.pathname.match(/^\/api\/orchestration\/tasks\/([a-f0-9]{16})/)?.[1]
     const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
     return (await handleOrchestrationApi(request, env, owner, correlationId)) || error('Orchestration route not found', 404)
+  }
+  if (url.pathname.startsWith('/api/specialist-runtime')) {
+    const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
+    return (await handleSpecialistRuntimeApi(request, env, owner, correlationId)) || error('Specialist runtime route not found', 404)
   }
   if (url.pathname === '/api/releases/status' && method === 'GET') {
     const githubConnected = Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_INSTALLATION_ID)
