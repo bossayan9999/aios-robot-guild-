@@ -6,6 +6,7 @@ A secure agentic research and engineering operations platform with a responsive 
 
 - Professional CyberScool shell with typed navigation across Mission Control, Copilot Manager, Specialists, R&D, Development Studio, Network Center, Integrations, Runtime Center, Audit & Security, Guild View, and Settings
 - Server-authoritative specialist runtime with versioned manifests, bounded capability grants, independent sandbox evaluations, suspension/revocation, and non-executing work contracts
+- Connector and skill registry with opaque server-side credential references, live provider verification, scoped grants, idempotency, rate limits, circuit breakers, revocation, and honest connection states
 - Backend-compatible vertical slice from task planning through specialist evidence, approval, validation, and final owner verification
 - Honest connector/runtime states: unimplemented or unverified capability is shown as Not configured or disconnected
 - Responsive desktop/mobile navigation, accessible focus states, and explicit loading, empty, error, and unavailable states

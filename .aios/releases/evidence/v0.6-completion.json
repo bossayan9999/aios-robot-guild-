@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "release": "v0.6",
+  "name": "CyberScool connector and skill registry",
+  "branch": "feature/cyberscool-platform-foundation",
+  "implementation_commit": "feat: add CyberScool connector and skill registry",
+  "environment": { "runtime": "Windows local development", "full_stack_url": "http://127.0.0.1:8794", "deployment_scope": "local verification only; no provider secrets" },
+  "gates": {
+    "implementation": { "status": "passed", "evidence": "Migration 0008, connector service, typed frontend state, and Integrations controls." },
+    "tests": { "status": "passed", "commands": ["npm run lint", "npm test", "npm run build", "npm run smoke", "node tests/connectors-smoke.mjs"] },
+    "validation": { "status": "passed", "evidence": "Fresh local D1 migration and authenticated Wrangler lifecycle." },
+    "specialist_review": { "status": "passed", "result": "Registry, adapter boundaries, state truthfulness, resilience, and frontend behavior reviewed." },
+    "security_review": { "status": "passed", "result": "No browser secrets; opaque references, live verification, grants, target constraints, rate limits, idempotency, revocation, and tenant isolation verified." },
+    "evidence_capture": { "status": "passed", "artifacts": ["tests/connectors.test.ts", "tests/connectors-smoke.mjs", "migrations/0008_connector_skill_registry.sql"] },
+    "required_approval": { "status": "passed", "scope": "Feature-branch implementation and credential-free local verification only." }
+  },
+  "residual_risks": ["GitHub and Cloudflare positive live verification require owner-configured server secrets and were not exercised locally.", "Remaining provider-specific adapters are intentionally NOT_CONFIGURED.", "Credential references depend on a production secret manager in Phase 13."]
+}

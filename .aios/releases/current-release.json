@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "release": "v0.5",
-  "name": "CyberScool specialist runtime",
+  "release": "v0.6",
+  "name": "CyberScool connector and skill registry",
   "status": "completed",
   "branch": "feature/cyberscool-platform-foundation",
-  "commit": "feat: add CyberScool specialist runtime",
+  "commit": "feat: add CyberScool connector and skill registry",
   "completed_at": "2026-07-21",
-  "completion_evidence": ".aios/releases/evidence/v0.5-completion.json",
+  "completion_evidence": ".aios/releases/evidence/v0.6-completion.json",
   "evidence_captured_at": "2026-07-21",
-  "next_release": "v0.6",
-  "next_objective": "Connector and skill registry"
+  "next_release": "v0.7",
+  "next_objective": "Execution runtime registry, enrollment, heartbeats, leases, revocation, and emergency stop"
 }

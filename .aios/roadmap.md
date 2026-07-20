@@ -118,6 +118,7 @@ Exit: production readiness is supported by independent evidence rather than feat
 - **v0.3 — Task engine:** server-authoritative D1 tasks and enforceable completion gates (`cc651c0`).
 - **v0.4 — Copilot orchestration:** versioned plans, bounded assignments, handoffs, reviews, conflicts, and final-report eligibility (`6f7f95d`).
 - **v0.5 — Specialist runtime:** typed definitions, scoped expiring grants, independent evaluation, execution contracts, performance evidence, suspension, and revocation.
+- **v0.6 — Connectors and skills:** versioned provider/skill manifests, opaque credential references, verified connection state, scoped grants, resilient read invocation, and revocation.
 - **v0.3 — Task engine:** canonical task state machine and enforceable completion gates.
 - **v0.4 — Copilot Manager:** specialist registry, assignment, handoffs, and review orchestration.
 - **v0.5 — Connectors:** verified GitHub and Cloudflare integrations.

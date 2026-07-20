@@ -29,6 +29,9 @@ export interface SpecialistManifest { id: string; version: number; name: string;
 export interface SpecialistEvaluation { id: string; specialist_id: string; specialist_version: number; score: number; passed: number; evaluator_specialist_id: string; status: string; created_at: string }
 export interface SpecialistCapabilityGrant { id: string; specialist_id: string; specialist_version: number; task_id: string; status: string; expires_at: string; revoked_at?: string }
 export interface SpecialistRuntimeRegistry { manifests: SpecialistManifest[]; evaluations: SpecialistEvaluation[]; grants: SpecialistCapabilityGrant[]; suspensions: Record<string, unknown>[] }
+export type ConnectorState = 'NOT_CONFIGURED' | 'CONFIGURING' | 'CHECKING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR' | 'SUSPENDED' | 'REVOKED'
+export interface ConnectorInstance { id: string; connector_id: string; connector_version: number; name: string; provider: string; auth_type: string; state: ConnectorState; provider_identity?: string; verified_scopes: string; last_verified_at?: string; failure_reason?: string; status: string }
+export interface ConnectorRegistry { connectors: ConnectorInstance[] }
 export interface OrchestrationPlan { id: string; task_id: string; plan_version: number; summary: string; risk_level: string; status: string; approved_at?: string }
 export interface OrchestrationStep { id: string; plan_id: string; plan_version: number; position: number; title: string; description: string; dependencies_json: string; accountable_specialist_id: string; acceptance_criteria: string; evidence_requirements: string; rollback_requirements: string; status: string }
 export interface SpecialistAssignmentRecord { id: string; plan_step_id: string; specialist_id: string; specialist_version: number; plan_version: number; status: AssignmentState; retry_count: number; retry_limit: number; evidence_refs: string }
@@ -109,7 +112,7 @@ export interface DeploymentHealth {
   version: string
   build: string
   checks: { worker: string; assets: string; database?: string }
-  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean; task_engine?: boolean; orchestration?: boolean }
+  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean; task_engine?: boolean; orchestration?: boolean; specialist_runtime?: boolean; connector_registry?: boolean }
   checked_at: string
   request_id?: string
 }

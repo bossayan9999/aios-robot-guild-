@@ -2,10 +2,11 @@ import { cookieValue, hashPassword, randomHex, sha256, verifyPassword } from './
 import { handleTaskApi } from './task-engine'
 import { handleOrchestrationApi } from './orchestration'
 import { handleSpecialistRuntimeApi } from './specialist-runtime'
+import { handleConnectorApi } from './connectors'
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server'
 import type { AuthenticationResponseJSON, AuthenticatorTransportFuture, RegistrationResponseJSON } from '@simplewebauthn/server'
 
-interface Env { DB: D1Database; ASSETS: Fetcher; OPENROUTER_API_KEY?: string; OPENROUTER_MODEL?: string; GITHUB_APP_ID?: string; GITHUB_APP_INSTALLATION_ID?: string }
+interface Env { DB: D1Database; ASSETS: Fetcher; OPENROUTER_API_KEY?: string; OPENROUTER_MODEL?: string; GITHUB_APP_ID?: string; GITHUB_APP_INSTALLATION_ID?: string; GITHUB_CONNECTOR_TOKEN?: string; CLOUDFLARE_API_TOKEN?: string; CLOUDFLARE_ACCOUNT_ID?: string }
 type AgentId = 'router' | 'planner' | 'builder' | 'tester' | 'reviewer'
 interface Mission { id: string; user_id: number; title: string; repository: string; status: string; plan: string; result?: string; created_at: string; updated_at: string }
 interface EventRecord { id?: number; mission_id: string; agent: AgentId; event_type: string; message: string; progress: number; evidence?: string; created_at?: string }
@@ -48,6 +49,9 @@ function auditAction(method: string, pathname: string) {
   if (pathname.startsWith('/api/tasks/')) return `task.${pathname.split('/').pop() || 'read'}`
   if (pathname.startsWith('/api/orchestration/')) return `orchestration.${pathname.split('/').pop() || 'read'}`
   if (pathname.startsWith('/api/specialist-runtime/')) return `specialist_runtime.${pathname.split('/').pop() || 'read'}`
+  if (pathname.startsWith('/api/connectors/')) return `connector.${pathname.split('/').pop() || 'read'}`
+  if (pathname === '/api/connectors') return 'connector.list'
+  if (pathname === '/api/skills') return 'skill.list'
   if (pathname === '/api/knowledge/search') return 'knowledge.search'
   if (/^\/api\/knowledge\//.test(pathname) && method === 'DELETE') return 'knowledge.delete'
   if (pathname === '/api/missions' && method === 'POST') return 'mission.create'
@@ -250,7 +254,7 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
   if (url.pathname === '/api/health' && method === 'GET') {
     let database = 'pass'
     try { await env.DB.prepare('SELECT 1 AS ready').first() } catch { database = 'fail' }
-    return json({ ok: database === 'pass', service: 'CyberScool', version: '1.4.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true, task_engine: true, orchestration: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
+    return json({ ok: database === 'pass', service: 'CyberScool', version: '1.6.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true, task_engine: true, orchestration: true, specialist_runtime: true, connector_registry: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
   }
   if (url.pathname === '/api/auth/status' && method === 'GET') {
     const id = await userId(request, env); const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()
@@ -309,6 +313,10 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
   if (url.pathname.startsWith('/api/specialist-runtime')) {
     const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
     return (await handleSpecialistRuntimeApi(request, env, owner, correlationId)) || error('Specialist runtime route not found', 404)
+  }
+  if (url.pathname.startsWith('/api/connectors') || url.pathname.startsWith('/api/skills')) {
+    const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
+    return (await handleConnectorApi(request, env, owner, correlationId)) || error('Connector route not found', 404)
   }
   if (url.pathname === '/api/releases/status' && method === 'GET') {
     const githubConnected = Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_INSTALLATION_ID)

@@ -1,4 +1,4 @@
-import type { DeploymentHealth, ReleaseCenterStatus, TaskDetails, TaskGateType } from '../types'
+import type { ConnectorInstance, DeploymentHealth, ReleaseCenterStatus, TaskDetails, TaskGateType } from '../types'
 
 export type ConnectionState = 'connected' | 'disconnected' | 'not_configured' | 'checking' | 'error'
 
@@ -45,7 +45,16 @@ export function integrationConnections(
   health: DeploymentHealth | null,
   releases: ReleaseCenterStatus | null,
   mcpVerified: boolean,
+  registry?: ConnectorInstance[],
 ): ConnectionRecord[] {
+  if (registry) return registry.map(item => ({
+    id: item.connector_id,
+    name: item.name,
+    category: 'integration',
+    state: item.state === 'CONNECTED' ? 'connected' : item.state === 'CHECKING' || item.state === 'CONFIGURING' ? 'checking' : item.state === 'NOT_CONFIGURED' ? 'not_configured' : item.state === 'ERROR' ? 'error' : 'disconnected',
+    detail: item.state === 'CONNECTED' ? `${item.provider_identity || item.provider} verified with ${JSON.parse(item.verified_scopes || '[]').join(', ') || 'provider-authorized access'}` : item.failure_reason || `${item.name} is ${item.state.toLowerCase().replaceAll('_', ' ')}`,
+    verifiedAt: item.last_verified_at,
+  }))
   const verifiedAt = health?.checked_at
   return [
     { id: 'github', name: 'GitHub', category: 'integration', state: releases?.github_connected ? 'connected' : 'not_configured', detail: releases?.github_connected ? 'Repository-scoped GitHub App verified' : 'GitHub App is not configured', verifiedAt },

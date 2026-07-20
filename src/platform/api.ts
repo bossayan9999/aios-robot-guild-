@@ -1,4 +1,4 @@
-import type { AuthStatus, DeploymentHealth, ForgeProfile, OrchestrationDetails, OrchestrationPlan, ReleaseCenterStatus, SpecialistManifest, SpecialistRuntimeRegistry, Task, TaskDetails, TaskGateType, TaskState } from '../types'
+import type { AuthStatus, ConnectorRegistry, ConnectorState, DeploymentHealth, ForgeProfile, OrchestrationDetails, OrchestrationPlan, ReleaseCenterStatus, SpecialistManifest, SpecialistRuntimeRegistry, Task, TaskDetails, TaskGateType, TaskState } from '../types'
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly requestId?: string) {
@@ -51,4 +51,8 @@ export const platformApi = {
   createCustomSpecialist: (input: Record<string, unknown>) => request<{ id: string; version: number; enabled: false }>('/api/orchestration/specialists/custom', { method: 'POST', body: JSON.stringify(input) }),
   currentOrchestrationPlan: (taskId: string) => request<{ plan: OrchestrationPlan | null }>(`/api/orchestration/tasks/${taskId}/plan`),
   specialistRuntimeRegistry: () => request<SpecialistRuntimeRegistry>('/api/specialist-runtime/registry'),
+  connectors: () => request<ConnectorRegistry>('/api/connectors'),
+  configureConnector: (id: string, credentialReference: string) => request<{ state: ConnectorState }>(`/api/connectors/${id}/configure`, { method: 'POST', body: JSON.stringify({ credential_reference: credentialReference }) }),
+  verifyConnector: (id: string) => request<{ state: ConnectorState }>(`/api/connectors/${id}/verify`, { method: 'POST', body: '{}' }),
+  revokeConnector: (id: string, reason: string) => request<{ state: ConnectorState }>(`/api/connectors/${id}/revoke`, { method: 'POST', body: JSON.stringify({ reason }) }),
 }
