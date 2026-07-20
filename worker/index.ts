@@ -1,5 +1,6 @@
 import { cookieValue, hashPassword, randomHex, sha256, verifyPassword } from './security'
 import { handleTaskApi } from './task-engine'
+import { handleOrchestrationApi } from './orchestration'
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server'
 import type { AuthenticationResponseJSON, AuthenticatorTransportFuture, RegistrationResponseJSON } from '@simplewebauthn/server'
 
@@ -44,6 +45,7 @@ function auditAction(method: string, pathname: string) {
   if (pathname === '/api/tasks' && method === 'POST') return 'task.create'
   if (pathname === '/api/tasks') return 'task.list'
   if (pathname.startsWith('/api/tasks/')) return `task.${pathname.split('/').pop() || 'read'}`
+  if (pathname.startsWith('/api/orchestration/')) return `orchestration.${pathname.split('/').pop() || 'read'}`
   if (pathname === '/api/knowledge/search') return 'knowledge.search'
   if (/^\/api\/knowledge\//.test(pathname) && method === 'DELETE') return 'knowledge.delete'
   if (pathname === '/api/missions' && method === 'POST') return 'mission.create'
@@ -59,6 +61,7 @@ function auditPath(pathname: string) {
   return pathname
     .replace(/\/api\/missions\/[a-f0-9]{12}/g, '/api/missions/:id')
     .replace(/\/api\/tasks\/[a-f0-9]{16}/g, '/api/tasks/:id')
+    .replace(/\/api\/orchestration\/tasks\/[a-f0-9]{16}/g, '/api/orchestration/tasks/:id')
     .replace(/\/api\/knowledge\/[a-zA-Z0-9_-]{3,80}/g, '/api/knowledge/:id')
 }
 
@@ -245,7 +248,7 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
   if (url.pathname === '/api/health' && method === 'GET') {
     let database = 'pass'
     try { await env.DB.prepare('SELECT 1 AS ready').first() } catch { database = 'fail' }
-    return json({ ok: database === 'pass', service: 'AIOS Robot Guild', version: '1.3.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true, task_engine: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
+    return json({ ok: database === 'pass', service: 'CyberScool', version: '1.4.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true, task_engine: true, orchestration: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
   }
   if (url.pathname === '/api/auth/status' && method === 'GET') {
     const id = await userId(request, env); const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()
@@ -295,6 +298,11 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
     audit.task_id = url.pathname.match(/^\/api\/tasks\/([a-f0-9]{16})/)?.[1]
     const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
     return (await handleTaskApi(request, env, owner, correlationId)) || error('Task API route not found', 404)
+  }
+  if (url.pathname.startsWith('/api/orchestration')) {
+    audit.task_id = url.pathname.match(/^\/api\/orchestration\/tasks\/([a-f0-9]{16})/)?.[1]
+    const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
+    return (await handleOrchestrationApi(request, env, owner, correlationId)) || error('Orchestration route not found', 404)
   }
   if (url.pathname === '/api/releases/status' && method === 'GET') {
     const githubConnected = Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_INSTALLATION_ID)
@@ -457,7 +465,7 @@ export default {
     const startedAt = Date.now()
     const audit: AuditContext = { action: auditAction(request.method, url.pathname) }
     let response: Response
-    if (url.pathname === '/mcp') response = json({ name: 'CyberScool', protocolVersion: '2025-06-18', transport: 'https', build: BUILD_ID, tools: [{ name: 'task_engine', description: 'Workspace-scoped, approval-gated task state and completion evidence' }, { name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }, { name: 'release_center', description: 'Owner-scoped release proposals, approvals and audit evidence; repository mutation requires a GitHub App' }], authentication: 'owner session required for execution' })
+    if (url.pathname === '/mcp') response = json({ name: 'CyberScool', protocolVersion: '2025-06-18', transport: 'https', build: BUILD_ID, tools: [{ name: 'task_engine', description: 'Workspace-scoped, approval-gated task state and completion evidence' }, { name: 'copilot_orchestration', description: 'Versioned plans, bounded specialist assignments, tracked handoffs and independent reviews' }, { name: 'repository_health', description: 'Approval-gated read-only public GitHub inspection' }, { name: 'guild_memory_search', description: 'Owner-scoped retrieval over cited, verified mission evidence' }, { name: 'release_center', description: 'Owner-scoped release proposals, approvals and audit evidence; repository mutation requires a GitHub App' }], authentication: 'owner session required for execution' })
     else if (url.pathname.startsWith('/api/')) { try { response = await apiHandler(request, env, audit) } catch (problem) { response = problem instanceof Response ? problem : error(problem instanceof Error ? problem.message : 'Unexpected error', 500) } }
     else response = await env.ASSETS.fetch(request)
     const secured = finalize(response, request, requestId)

@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { PlatformState } from './state'
 import { ConnectionCard, EmptyState, Panel, StatusPill } from './components'
 
-const specialists = [
+const legacySpecialists = [
   ['Tech Development', 'Software architecture, implementation and testing', 'TD'],
   ['Business', 'Requirements, operations and value analysis', 'BU'],
   ['Finance Advisory', 'Scenario planning and financial risk explanation', 'FA'],
@@ -14,8 +15,14 @@ const specialists = [
 ]
 
 export function SpecialistTeam({ state }: { state: PlatformState }) {
+  const [name, setName] = useState('')
+  const assignments = new Map((state.orchestration?.specialist_assignments || []).map(item => [item.specialist_id, item]))
+  if (state.specialists.length || state.health?.capabilities?.orchestration) return <ScreenTitle eyebrow="CAPABILITY REGISTRY" title="Specialist Team" detail="Versioned roles receive bounded tasks and least-privileged tools.">
+    <div className="cs-specialists">{state.specialists.map(manifest => { const assignment = assignments.get(manifest.id); return <article key={`${manifest.id}-${manifest.version}`}><div className="cs-monogram">{manifest.name.split(' ').map(word => word[0]).join('').slice(0, 2)}</div><div><h2>{manifest.name} <small>v{manifest.version}</small></h2><p>{manifest.role}</p><small>{manifest.risk_level} risk · {manifest.enabled ? 'enabled manifest' : 'disabled by policy'}</small></div><StatusPill state={assignment ? 'active' : manifest.enabled ? 'pending' : 'not_configured'}>{assignment?.status || (manifest.enabled ? 'Standby' : 'Disabled')}</StatusPill></article> })}</div>
+    <Panel title="Custom specialist builder" eyebrow="SAFE DEFAULT-OFF REGISTRY"><form className="cs-chat-form" onSubmit={event => { event.preventDefault(); if (!name.trim()) return; void state.createCustomSpecialist({ name, role: name, instructions: `Operate only within the approved ${name} assignment scope. Escalate uncertainty and attach evidence.`, input_schema: { type: 'object' }, output_schema: { type: 'object' }, requested_tools: [], requested_connectors: [], requested_runtimes: ['docker-sandbox'], risk_level: 'high', approval_policy: 'sandbox, security, owner', test_cases: [{ name: 'reject scope expansion' }] }); setName('') }}><input aria-label="Custom specialist name" value={name} onChange={event => setName(event.target.value)} placeholder="Specialist name" maxLength={80} /><button className="cs-button--primary" disabled={state.busy || name.trim().length < 3}>Create disabled draft</button></form><p className="cs-callout">Custom specialists are versioned and disabled by default. Sandbox evaluation, security review, and owner approval are required before enablement; revocation remains server controlled.</p></Panel>
+  </ScreenTitle>
   return <ScreenTitle eyebrow="CAPABILITY REGISTRY" title="Specialist Team" detail="Versioned roles receive bounded tasks and least-privileged tools.">
-    <div className="cs-specialists">{specialists.map(([name, detail, icon], index) => <article key={name}><div className="cs-monogram">{icon}</div><div><h2>{name}</h2><p>{detail}</p><small>{index < (state.profile?.specialists.length || 0) ? 'Profile available from backend' : 'Available for assignment · no active execution'}</small></div><StatusPill state="pending">Standby</StatusPill></article>)}</div>
+    <div className="cs-specialists">{legacySpecialists.map(([name, detail, icon], index) => <article key={name}><div className="cs-monogram">{icon}</div><div><h2>{name}</h2><p>{detail}</p><small>{index < (state.profile?.specialists.length || 0) ? 'Profile available from backend' : 'Available for assignment · no active execution'}</small></div><StatusPill state="pending">Standby</StatusPill></article>)}</div>
     <Panel title="Custom specialist builder" eyebrow="BACKEND TASK"><EmptyState title="Not configured" detail="A specialist manifest registry, evaluation sandbox, and approval API must be implemented before custom specialists can be created." action={<button disabled>Create specialist</button>} /></Panel>
   </ScreenTitle>
 }

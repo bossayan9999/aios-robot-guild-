@@ -24,6 +24,14 @@ export interface TaskGate { id: number; task_id: string; workspace_id: string; g
 export interface TaskEvidence { id: string; task_id: string; workspace_id: string; evidence_type: string; title: string; content: string; uri?: string; sha256?: string; plan_version: number; created_at: string }
 export interface TaskDetails { task: Task; plans: TaskPlanVersion[]; steps: unknown[]; dependencies: unknown[]; events: TaskStateEvent[]; assignments: TaskAssignment[]; gates: TaskGate[]; evidence: TaskEvidence[]; specialist_reviews: unknown[]; security_reviews: unknown[]; completion_approvals: unknown[] }
 
+export type AssignmentState = 'PROPOSED' | 'WAITING_FOR_APPROVAL' | 'ASSIGNED' | 'RUNNING' | 'WAITING_FOR_INPUT' | 'REVIEWING' | 'REPAIRING' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'CANCELLED'
+export interface SpecialistManifest { id: string; version: number; name: string; role: string; instructions: string; risk_level: string; enabled: number; allowed_tools: string; allowed_connectors: string; allowed_runtimes: string; approval_requirements: string; status: string }
+export interface OrchestrationPlan { id: string; task_id: string; plan_version: number; summary: string; risk_level: string; status: string; approved_at?: string }
+export interface OrchestrationStep { id: string; plan_id: string; plan_version: number; position: number; title: string; description: string; dependencies_json: string; accountable_specialist_id: string; acceptance_criteria: string; evidence_requirements: string; rollback_requirements: string; status: string }
+export interface SpecialistAssignmentRecord { id: string; plan_step_id: string; specialist_id: string; specialist_version: number; plan_version: number; status: AssignmentState; retry_count: number; retry_limit: number; evidence_refs: string }
+export interface OrchestrationEvent { id: number; task_id: string; plan_version: number; event_type: string; target_type: string; target_id: string; status: string; detail: string; evidence_refs: string; correlation_id: string; created_at: string }
+export interface OrchestrationDetails { task: Task; copilot_sessions: Record<string, unknown>[]; copilot_objectives: Record<string, unknown>[]; task_plans: OrchestrationPlan[]; plan_steps: OrchestrationStep[]; specialist_assignments: SpecialistAssignmentRecord[]; specialist_handoffs: Record<string, unknown>[]; specialist_results: Record<string, unknown>[]; review_findings: Record<string, unknown>[]; conflict_records: Record<string, unknown>[]; escalation_requests: Record<string, unknown>[]; orchestration_events: OrchestrationEvent[] }
+
 export interface Agent {
   id: AgentId
   name: string
@@ -98,7 +106,7 @@ export interface DeploymentHealth {
   version: string
   build: string
   checks: { worker: string; assets: string; database?: string }
-  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean; task_engine?: boolean }
+  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean; task_engine?: boolean; orchestration?: boolean }
   checked_at: string
   request_id?: string
 }
