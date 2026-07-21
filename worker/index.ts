@@ -3,6 +3,7 @@ import { handleTaskApi } from './task-engine'
 import { handleOrchestrationApi } from './orchestration'
 import { handleSpecialistRuntimeApi } from './specialist-runtime'
 import { handleConnectorApi } from './connectors'
+import { handleRuntimeAgentApi, handleRuntimeApi } from './runtimes'
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server'
 import type { AuthenticationResponseJSON, AuthenticatorTransportFuture, RegistrationResponseJSON } from '@simplewebauthn/server'
 
@@ -254,7 +255,7 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
   if (url.pathname === '/api/health' && method === 'GET') {
     let database = 'pass'
     try { await env.DB.prepare('SELECT 1 AS ready').first() } catch { database = 'fail' }
-    return json({ ok: database === 'pass', service: 'CyberScool', version: '1.6.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true, task_engine: true, orchestration: true, specialist_runtime: true, connector_registry: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
+    return json({ ok: database === 'pass', service: 'CyberScool', version: '1.7.0', build: BUILD_ID, checks: { worker: 'pass', assets: 'pass', database }, capabilities: { ai_provider: Boolean(env.OPENROUTER_API_KEY), passkeys: true, pwa: true, task_engine: true, orchestration: true, specialist_runtime: true, connector_registry: true, execution_runtimes: true }, checked_at: new Date().toISOString() }, database === 'pass' ? 200 : 503)
   }
   if (url.pathname === '/api/auth/status' && method === 'GET') {
     const id = await userId(request, env); const count = await env.DB.prepare('SELECT COUNT(*) AS count FROM users').first<{ count: number }>()
@@ -299,6 +300,10 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
     const token = await freshSession(env, owner)
     return json({ ok: true }, 200, { 'Set-Cookie': secureCookie(request, token) })
   }
+  if (url.pathname.startsWith('/api/runtime-agent/')) {
+    const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
+    return (await handleRuntimeAgentApi(request, env, correlationId)) || error('Runtime agent route not found', 404)
+  }
   const owner = await requireUser(request, env)
   if (url.pathname.startsWith('/api/tasks')) {
     audit.task_id = url.pathname.match(/^\/api\/tasks\/([a-f0-9]{16})/)?.[1]
@@ -317,6 +322,10 @@ async function apiHandler(request: Request, env: Env, audit: AuditContext) {
   if (url.pathname.startsWith('/api/connectors') || url.pathname.startsWith('/api/skills')) {
     const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
     return (await handleConnectorApi(request, env, owner, correlationId)) || error('Connector route not found', 404)
+  }
+  if (url.pathname.startsWith('/api/runtimes')) {
+    const correlationId = request.headers.get('X-Correlation-ID')?.trim().slice(0, 128) || crypto.randomUUID()
+    return (await handleRuntimeApi(request, env, owner, correlationId)) || error('Runtime route not found', 404)
   }
   if (url.pathname === '/api/releases/status' && method === 'GET') {
     const githubConnected = Boolean(env.GITHUB_APP_ID && env.GITHUB_APP_INSTALLATION_ID)

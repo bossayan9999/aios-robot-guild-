@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { AuthStatus, ConnectorRegistry, DeploymentHealth, ForgeProfile, OrchestrationDetails, ReleaseCenterStatus, SpecialistManifest, SpecialistRuntimeRegistry, Task, TaskDetails, TaskState } from '../types'
+import type { AuthStatus, ConnectorRegistry, DeploymentHealth, ForgeProfile, OrchestrationDetails, ReleaseCenterStatus, RuntimeRegistry, SpecialistManifest, SpecialistRuntimeRegistry, Task, TaskDetails, TaskState } from '../types'
 import { platformApi } from './api'
 import { taskCompletionGates, integrationConnections, runtimeConnections } from './domain'
 
@@ -16,9 +16,9 @@ export function usePlatformState() {
   const [specialists, setSpecialists] = useState<SpecialistManifest[]>([])
   const [specialistRuntime, setSpecialistRuntime] = useState<SpecialistRuntimeRegistry | null>(null)
   const [connectorRegistry, setConnectorRegistry] = useState<ConnectorRegistry | null>(null)
+  const [runtimeRegistry, setRuntimeRegistry] = useState<RuntimeRegistry | null>(null)
   const [finalReport, setFinalReport] = useState<{ eligible: boolean; reasons: string[]; summary: string } | null>(null)
   const [mcpVerified, setMcpVerified] = useState(false)
-  const [terminalConnected, setTerminalConnected] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -42,10 +42,9 @@ export function usePlatformState() {
       const [nextAuth, nextHealth] = await Promise.all([platformApi.authStatus(), platformApi.health()])
       setAuth(nextAuth); setHealth(nextHealth)
       platformApi.mcp().then(() => setMcpVerified(true)).catch(() => setMcpVerified(false))
-      fetch('http://127.0.0.1:4317/health').then(response => setTerminalConnected(response.ok)).catch(() => setTerminalConnected(false))
       if (nextAuth.authenticated) {
-        const [taskResult, releases, nextProfile, registry, runtimeRegistry, connectors] = await Promise.all([platformApi.tasks(), platformApi.releaseStatus(), platformApi.copilotProfile(), platformApi.specialists(), platformApi.specialistRuntimeRegistry(), platformApi.connectors()])
-        setTasks(taskResult.tasks); setReleaseStatus(releases); setProfile(nextProfile); setSpecialists(registry.specialists); setSpecialistRuntime(runtimeRegistry); setConnectorRegistry(connectors)
+        const [taskResult, releases, nextProfile, registry, specialistRegistry, connectors, executionRegistry] = await Promise.all([platformApi.tasks(), platformApi.releaseStatus(), platformApi.copilotProfile(), platformApi.specialists(), platformApi.specialistRuntimeRegistry(), platformApi.connectors(), platformApi.runtimes()])
+        setTasks(taskResult.tasks); setReleaseStatus(releases); setProfile(nextProfile); setSpecialists(registry.specialists); setSpecialistRuntime(specialistRegistry); setConnectorRegistry(connectors); setRuntimeRegistry(executionRegistry)
         if (taskResult.tasks[0]) await loadTask(taskResult.tasks[0].id)
       }
     } catch (problem) { setError(problem instanceof Error ? problem.message : 'Unable to load CyberScool') }
@@ -86,10 +85,10 @@ export function usePlatformState() {
   const activeTask = taskDetails?.task || null
   const gates = useMemo(() => taskCompletionGates(taskDetails), [taskDetails])
   const integrations = useMemo(() => integrationConnections(health, releaseStatus, mcpVerified, connectorRegistry?.connectors), [health, releaseStatus, mcpVerified, connectorRegistry])
-  const runtimes = useMemo(() => runtimeConnections(health, terminalConnected), [health, terminalConnected])
+  const runtimes = useMemo(() => runtimeConnections(runtimeRegistry), [runtimeRegistry])
 
   return {
-    auth, health, releaseStatus, profile, tasks, taskDetails, orchestration, specialists, specialistRuntime, connectorRegistry, finalReport, activeTask, events: taskDetails?.events || [], loading, busy, error,
+    auth, health, releaseStatus, profile, tasks, taskDetails, orchestration, specialists, specialistRuntime, connectorRegistry, runtimeRegistry, finalReport, activeTask, events: taskDetails?.events || [], loading, busy, error,
     gates, integrations, runtimes, refresh, authenticate, loadTask, createTask,
     savePlan: (content: string) => activeTask && taskAction(() => platformApi.savePlan(activeTask.id, content)),
     transitionTask: (to: TaskState, reason: string) => activeTask && taskAction(() => platformApi.transitionTask(activeTask.id, to, reason, operationKey(`transition-${to}`))),
@@ -135,6 +134,7 @@ export function usePlatformState() {
     configureConnector: (id: string) => connectorAction(() => platformApi.configureConnector(id, id === 'github' ? 'env:GITHUB_CONNECTOR_TOKEN' : 'env:CLOUDFLARE_API_TOKEN')),
     verifyConnector: (id: string) => connectorAction(() => platformApi.verifyConnector(id)),
     revokeConnector: (id: string) => connectorAction(() => platformApi.revokeConnector(id, 'Owner revoked connector access.')),
+    emergencyStop: () => connectorAction(async () => { await platformApi.emergencyStop('Owner activated workspace emergency stop.'); setRuntimeRegistry(await platformApi.runtimes()) }),
     askCopilot: platformApi.copilot,
     logout: async () => { await platformApi.logout(); setTaskDetails(null); setTasks([]); await refresh() },
   }

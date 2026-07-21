@@ -32,6 +32,10 @@ export interface SpecialistRuntimeRegistry { manifests: SpecialistManifest[]; ev
 export type ConnectorState = 'NOT_CONFIGURED' | 'CONFIGURING' | 'CHECKING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR' | 'SUSPENDED' | 'REVOKED'
 export interface ConnectorInstance { id: string; connector_id: string; connector_version: number; name: string; provider: string; auth_type: string; state: ConnectorState; provider_identity?: string; verified_scopes: string; last_verified_at?: string; failure_reason?: string; status: string }
 export interface ConnectorRegistry { connectors: ConnectorInstance[] }
+export interface RuntimeIdentity { id: string; profile_id: string; profile_version: number; display_name: string; state: 'DISCONNECTED' | 'CONNECTED' | 'DEGRADED' | 'SUSPENDED' | 'REVOKED'; capability_version: number; enrolled_at: string; last_heartbeat_at?: string; suspended_at?: string; revoked_at?: string }
+export interface RuntimeProfile { id: string; version: number; name: string; sandbox_strength: string; default_actions_json: string; status: string }
+export interface RuntimeLease { id: string; runtime_id: string; task_id: string; action: string; status: string; expires_at: string; created_at: string }
+export interface RuntimeRegistry { profiles: RuntimeProfile[]; runtimes: RuntimeIdentity[]; leases: RuntimeLease[]; emergency_stops: Record<string, unknown>[]; heartbeat_fresh_seconds: number }
 export interface OrchestrationPlan { id: string; task_id: string; plan_version: number; summary: string; risk_level: string; status: string; approved_at?: string }
 export interface OrchestrationStep { id: string; plan_id: string; plan_version: number; position: number; title: string; description: string; dependencies_json: string; accountable_specialist_id: string; acceptance_criteria: string; evidence_requirements: string; rollback_requirements: string; status: string }
 export interface SpecialistAssignmentRecord { id: string; plan_step_id: string; specialist_id: string; specialist_version: number; plan_version: number; status: AssignmentState; retry_count: number; retry_limit: number; evidence_refs: string }
@@ -112,7 +116,7 @@ export interface DeploymentHealth {
   version: string
   build: string
   checks: { worker: string; assets: string; database?: string }
-  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean; task_engine?: boolean; orchestration?: boolean; specialist_runtime?: boolean; connector_registry?: boolean }
+  capabilities?: { ai_provider: boolean; passkeys: boolean; pwa: boolean; task_engine?: boolean; orchestration?: boolean; specialist_runtime?: boolean; connector_registry?: boolean; execution_runtimes?: boolean }
   checked_at: string
   request_id?: string
 }

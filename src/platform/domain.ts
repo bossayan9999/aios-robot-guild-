@@ -1,4 +1,4 @@
-import type { ConnectorInstance, DeploymentHealth, ReleaseCenterStatus, TaskDetails, TaskGateType } from '../types'
+import type { ConnectorInstance, DeploymentHealth, ReleaseCenterStatus, RuntimeRegistry, TaskDetails, TaskGateType } from '../types'
 
 export type ConnectionState = 'connected' | 'disconnected' | 'not_configured' | 'checking' | 'error'
 
@@ -71,18 +71,14 @@ export function integrationConnections(
   ]
 }
 
-export function runtimeConnections(health: DeploymentHealth | null, terminalConnected: boolean): ConnectionRecord[] {
-  const workerConnected = Boolean(health?.ok && health.checks?.worker === 'pass')
-  return [
-    { id: 'local-agent', name: 'Local PC agent', category: 'runtime', state: terminalConnected ? 'connected' : 'disconnected', detail: terminalConnected ? 'Loopback companion verified' : 'Local companion is not paired' },
-    { id: 'unix-agent', name: 'Linux / macOS agent', category: 'runtime', state: 'not_configured', detail: 'No cross-platform runtime agent is enrolled' },
-    { id: 'docker', name: 'Docker sandbox', category: 'runtime', state: 'not_configured', detail: 'No runtime registry API is implemented' },
-    { id: 'vps', name: 'VPS', category: 'runtime', state: 'not_configured', detail: 'No runtime enrollment is configured' },
-    { id: 'private-server', name: 'Private server', category: 'runtime', state: 'not_configured', detail: 'No runtime enrollment is configured' },
-    { id: 'cloud-worker', name: 'Cloud worker', category: 'runtime', state: workerConnected ? 'connected' : health ? 'disconnected' : 'checking', detail: workerConnected ? 'Cloudflare Worker health verified' : 'Worker health unavailable', verifiedAt: health?.checked_at },
-    { id: 'network-agent', name: 'Network agent', category: 'runtime', state: 'not_configured', detail: 'No authorized network runtime is enrolled' },
-    { id: 'mobile', name: 'Mobile paired devices', category: 'runtime', state: 'not_configured', detail: 'Device pairing registry backend task required' },
-  ]
+export function runtimeConnections(registry: RuntimeRegistry | null): ConnectionRecord[] {
+  return (registry?.profiles || []).map(profile => {
+    const enrolled = registry?.runtimes.find(item => item.profile_id === profile.id)
+    if (!enrolled) return { id: profile.id, name: profile.name, category: 'runtime', state: 'not_configured', detail: 'No runtime identity is enrolled' }
+    const fresh = Boolean(enrolled.last_heartbeat_at && Date.now() - new Date(enrolled.last_heartbeat_at).getTime() <= registry.heartbeat_fresh_seconds * 1000)
+    const state: ConnectionState = enrolled.state === 'CONNECTED' && fresh ? 'connected' : enrolled.state === 'DEGRADED' && fresh ? 'error' : 'disconnected'
+    return { id: profile.id, name: enrolled.display_name, category: 'runtime', state, detail: state === 'connected' ? `Authenticated ${profile.name} heartbeat verified` : `${profile.name} is ${enrolled.state.toLowerCase()}; no fresh verified heartbeat`, verifiedAt: enrolled.last_heartbeat_at }
+  })
 }
 
 export function connectionLabel(state: ConnectionState) {
